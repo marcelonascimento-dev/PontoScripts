@@ -1,0 +1,95 @@
+@page "/scripts"
+@rendermode InteractiveServer
+@inject ScriptAlteracaoService ScriptService
+
+<PageTitle>Scripts - PontoScripts</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Scripts de Alteração</h3>
+    <a href="scripts/novo" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Novo Script
+    </a>
+</div>
+
+<div class="mb-3">
+    <div class="input-group" style="max-width: 400px;">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" placeholder="Buscar por OS, descrição ou branch..." @bind="busca" @bind:event="oninput" @bind:after="FiltrarAsync" />
+    </div>
+</div>
+
+@if (entries is null)
+{
+    <div class="text-center p-5"><span class="spinner-border"></span></div>
+}
+else if (entries.Count == 0)
+{
+    <div class="alert alert-info">Nenhum script cadastrado.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>OS</th>
+                    <th>Branch</th>
+                    <th>Descrição</th>
+                    <th>Criado Por</th>
+                    <th>Data</th>
+                    <th>Ordem</th>
+                    <th>Status</th>
+                    <th style="width: 100px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in entries)
+                {
+                    <tr>
+                        <td>@(e.NumeroOS ?? "-")</td>
+                        <td><small class="text-muted">@(e.Branch ?? "-")</small></td>
+                        <td>@e.Descricao</td>
+                        <td>@e.CriadoPor</td>
+                        <td>@e.DataCriacao.ToString("dd/MM/yyyy")</td>
+                        <td>@e.OrdemExecucao</td>
+                        <td>
+                            @if (e.VersaoScripts.Any())
+                            {
+                                <span class="badge bg-success">Versionado</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Pendente</span>
+                            }
+                        </td>
+                        <td>
+                            <a href="scripts/@e.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ExcluirAsync(e)"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ScriptAlteracaoEntry>? entries;
+    private string busca = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        entries = await ScriptService.ListarAsync();
+    }
+
+    private async Task FiltrarAsync()
+    {
+        entries = await ScriptService.ListarAsync(string.IsNullOrWhiteSpace(busca) ? null : busca);
+    }
+
+    private async Task ExcluirAsync(ScriptAlteracaoEntry entry)
+    {
+        await ScriptService.ExcluirAsync(entry.Id);
+        entries = await ScriptService.ListarAsync(string.IsNullOrWhiteSpace(busca) ? null : busca);
+    }
+}

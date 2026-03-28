@@ -1,0 +1,181 @@
+@page "/versoes/{Id:int}"
+@rendermode InteractiveServer
+@inject VersaoService VersaoService
+@inject SqlGeneratorService SqlGenerator
+@inject NavigationManager Nav
+
+<PageTitle>Versão @(versao?.Numero ?? "") - PontoScripts</PageTitle>
+
+@if (versao is null)
+{
+    <div class="text-center p-5"><span class="spinner-border"></span></div>
+}
+else
+{
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="versoes">Versões</a></li>
+            <li class="breadcrumb-item active">@versao.Numero</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0">Versão @versao.Numero</h3>
+            <small class="text-muted">
+                Criada em @versao.DataCriacao.ToString("dd/MM/yyyy HH:mm")
+                | @versao.VersaoGlobalizacoes.Count globalização(ões)
+                | @versao.VersaoScripts.Count script(s)
+            </small>
+        </div>
+        <div>
+            <span class="badge @GetStatusBadge(versao.Status) fs-6 me-2">@versao.Status</span>
+            @if (versao.Status == StatusVersao.Aberta)
+            {
+                <button class="btn btn-success me-1" @onclick="MarcarGeradaAsync">
+                    <i class="bi bi-check-circle me-1"></i>Marcar como Gerada
+                </button>
+            }
+            @if (versao.Status == StatusVersao.Gerada)
+            {
+                <button class="btn btn-primary" @onclick="MarcarLiberadaAsync">
+                    <i class="bi bi-rocket-takeoff me-1"></i>Marcar como Liberada
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Globalizações -->
+    @if (versao.VersaoGlobalizacoes.Count > 0)
+    {
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-translate me-2"></i>Globalizações</h5></div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    @foreach (var vg in versao.VersaoGlobalizacoes)
+                    {
+                        <a href="globalizacao/@vg.GlobalizacaoEntryId" class="list-group-item list-group-item-action d-flex justify-content-between">
+                            <div>
+                                <strong>@vg.GlobalizacaoEntry.Tipo</strong>
+                                <span class="text-muted ms-2">@vg.GlobalizacaoEntry.Mensagem</span>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Scripts -->
+    @if (versao.VersaoScripts.Count > 0)
+    {
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-file-earmark-code me-2"></i>Scripts de Alteração</h5></div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    @foreach (var vs in versao.VersaoScripts.OrderBy(x => x.Script.NumeroOS).ThenBy(x => x.Script.OrdemExecucao))
+                    {
+                        <div class="list-group-item d-flex justify-content-between">
+                            <div>
+                                @if (!string.IsNullOrWhiteSpace(vs.Script.NumeroOS))
+                                {
+                                    <strong>OS @vs.Script.NumeroOS</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Sem OS</span>
+                                }
+                                <span class="ms-2">@vs.Script.Descricao</span>
+                                @if (!string.IsNullOrWhiteSpace(vs.Script.Branch))
+                                {
+                                    <small class="text-muted ms-2"><i class="bi bi-git me-1"></i>@vs.Script.Branch</small>
+                                }
+                            </div>
+                            <small class="text-muted">@vs.Script.CriadoPor</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Preview dos scripts -->
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link @(abaAtiva == "glob" ? "active" : "")" @onclick='() => abaAtiva = "glob"'>
+                        <i class="bi bi-translate me-1"></i>Globalizacao.sql
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(abaAtiva == "script" ? "active" : "")" @onclick='() => abaAtiva = "script"'>
+                        <i class="bi bi-file-earmark-code me-1"></i>ScriptAlteracaoBanco.sql
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                @if (abaAtiva == "glob")
+                {
+                    <a href="/api/versao/@versao.Id/download/globalizacao" class="btn btn-outline-primary" target="_blank">
+                        <i class="bi bi-download me-1"></i>Download Globalizacao.sql
+                    </a>
+                }
+                else
+                {
+                    <a href="/api/versao/@versao.Id/download/scriptalteracao" class="btn btn-outline-primary" target="_blank">
+                        <i class="bi bi-download me-1"></i>Download ScriptAlteracaoBanco.sql
+                    </a>
+                }
+            </div>
+            <pre class="bg-dark text-light p-3 rounded" style="max-height: 600px; overflow-y: auto; font-size: 0.8rem;"><code>@(abaAtiva == "glob" ? previewGlob : previewScript)</code></pre>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Versao? versao;
+    private string abaAtiva = "glob";
+    private string previewGlob = "";
+    private string previewScript = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        versao = await VersaoService.ObterAsync(Id);
+        if (versao is null) { Nav.NavigateTo("versoes"); return; }
+        GerarPreviews();
+    }
+
+    private void GerarPreviews()
+    {
+        if (versao is null) return;
+        var globBytes = SqlGenerator.GerarGlobalizacao(versao);
+        previewGlob = System.Text.Encoding.UTF8.GetString(globBytes.AsSpan(3));
+        var scriptBytes = SqlGenerator.GerarScriptAlteracao(versao);
+        previewScript = System.Text.Encoding.UTF8.GetString(scriptBytes.AsSpan(3));
+    }
+
+    private async Task MarcarGeradaAsync()
+    {
+        await VersaoService.MarcarComoGeradaAsync(Id);
+        versao = await VersaoService.ObterAsync(Id);
+    }
+
+    private async Task MarcarLiberadaAsync()
+    {
+        await VersaoService.MarcarComoLiberadaAsync(Id);
+        versao = await VersaoService.ObterAsync(Id);
+    }
+
+    private string GetStatusBadge(StatusVersao status) => status switch
+    {
+        StatusVersao.Aberta => "bg-warning text-dark",
+        StatusVersao.Gerada => "bg-info",
+        StatusVersao.Liberada => "bg-success",
+        _ => "bg-secondary"
+    };
+}

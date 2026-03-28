@@ -1,0 +1,120 @@
+@page "/globalizacao/novo"
+@page "/globalizacao/{Id:int}"
+@rendermode InteractiveServer
+@inject GlobalizacaoService GlobService
+@inject NavigationManager Nav
+
+<PageTitle>@(Id.HasValue ? "Editar Globalização" : "Nova Globalização")</PageTitle>
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="globalizacao">Globalização</a></li>
+        <li class="breadcrumb-item active">@(Id.HasValue ? "Editar" : "Nova")</li>
+    </ol>
+</nav>
+
+<h3 class="mb-3">@(Id.HasValue ? "Editar Globalização" : "Nova Globalização")</h3>
+
+@if (errosEncoding.Count > 0)
+{
+    <div class="alert alert-danger">
+        <h6><i class="bi bi-exclamation-triangle me-1"></i>Erros de Encoding Detectados</h6>
+        <ul class="mb-0">
+            @foreach (var erro in errosEncoding)
+            {
+                <li>@erro</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(erroDuplicada))
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-1"></i>@erroDuplicada
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <EditForm Model="entry" OnValidSubmit="SalvarAsync" FormName="globForm">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Tipo (GLMTIPO)</label>
+                    <InputText class="form-control" @bind-Value="entry.Tipo" list="tiposList" placeholder="Ex: Globalizacao.Geral.Comum" />
+                    <datalist id="tiposList">
+                        @foreach (var tipo in tiposDistintos)
+                        {
+                            <option value="@tipo" />
+                        }
+                    </datalist>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Mensagem (Chave)</label>
+                    <InputText class="form-control" @bind-Value="entry.Mensagem" placeholder="Ex: MensagemDeSucesso" />
+                </div>
+
+                <div class="col-12"><hr /><h5>Traduções</h5></div>
+
+                <div class="col-md-4">
+                    <label class="form-label"><span class="badge bg-success me-1">pt-BR</span> Português</label>
+                    <InputTextArea class="form-control" @bind-Value="entry.TraducaoPtBR" rows="4" placeholder="Tradução em português..." />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label"><span class="badge bg-primary me-1">en-US</span> English</label>
+                    <InputTextArea class="form-control" @bind-Value="entry.TraducaoEnUS" rows="4" placeholder="English translation..." />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label"><span class="badge bg-warning text-dark me-1">es-ES</span> Español</label>
+                    <InputTextArea class="form-control" @bind-Value="entry.TraducaoEsES" rows="4" placeholder="Traducción en español..." />
+                </div>
+
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-check-lg me-1"></i>Salvar
+                    </button>
+                    <a href="globalizacao" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private GlobalizacaoEntry entry = new();
+    private List<string> tiposDistintos = [];
+    private List<string> errosEncoding = [];
+    private string? erroDuplicada;
+
+    protected override async Task OnInitializedAsync()
+    {
+        tiposDistintos = await GlobService.ListarTiposDistintosAsync();
+
+        if (Id.HasValue)
+        {
+            var loaded = await GlobService.ObterAsync(Id.Value);
+            if (loaded is not null) entry = loaded;
+            else Nav.NavigateTo("globalizacao");
+        }
+    }
+
+    private async Task SalvarAsync()
+    {
+        errosEncoding = EncodingValidator.ValidarGlobalizacao(entry.Tipo, entry.Mensagem, entry.TraducaoPtBR, entry.TraducaoEnUS, entry.TraducaoEsES);
+        if (errosEncoding.Count > 0) return;
+
+        var duplicada = await GlobService.ExisteDuplicadaAsync(entry.Tipo, entry.Mensagem, Id);
+        if (duplicada)
+        {
+            erroDuplicada = $"Já existe uma entrada com Tipo '{entry.Tipo}' e Mensagem '{entry.Mensagem}'.";
+            return;
+        }
+        erroDuplicada = null;
+
+        if (Id.HasValue) await GlobService.AtualizarAsync(entry);
+        else await GlobService.CriarAsync(entry);
+        Nav.NavigateTo("globalizacao");
+    }
+}

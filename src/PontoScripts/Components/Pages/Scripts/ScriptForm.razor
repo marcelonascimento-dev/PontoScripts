@@ -1,0 +1,102 @@
+@page "/scripts/novo"
+@page "/scripts/{Id:int}"
+@rendermode InteractiveServer
+@inject ScriptAlteracaoService ScriptService
+@inject NavigationManager Nav
+
+<PageTitle>@(Id.HasValue ? "Editar Script" : "Novo Script")</PageTitle>
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="scripts">Scripts</a></li>
+        <li class="breadcrumb-item active">@(Id.HasValue ? "Editar" : "Novo")</li>
+    </ol>
+</nav>
+
+<h3 class="mb-3">@(Id.HasValue ? "Editar Script" : "Novo Script")</h3>
+
+@if (errosSintaxe.Count > 0)
+{
+    <div class="alert alert-danger">
+        <h6><i class="bi bi-exclamation-triangle me-1"></i>Erros de Sintaxe Detectados</h6>
+        <ul class="mb-0">
+            @foreach (var erro in errosSintaxe)
+            {
+                <li>@erro</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        <EditForm Model="entry" OnValidSubmit="SalvarAsync" FormName="scriptForm">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">OS / Improvement</label>
+                    <InputText class="form-control" @bind-Value="entry.NumeroOS" placeholder="Ex: 29501 (opcional)" />
+                    <small class="text-muted">Não obrigatório</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Branch</label>
+                    <InputText class="form-control" @bind-Value="entry.Branch" placeholder="Ex: improvement/item-29501" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Criado Por</label>
+                    <InputText class="form-control" @bind-Value="entry.CriadoPor" placeholder="Nome do desenvolvedor" />
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Descrição</label>
+                    <InputText class="form-control" @bind-Value="entry.Descricao" placeholder="Descrição curta do script" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Ordem de Execução</label>
+                    <InputNumber class="form-control" @bind-Value="entry.OrdemExecucao" />
+                    <small class="text-muted">0 = auto-incremento</small>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Script SQL</label>
+                    <div class="alert alert-info py-2">
+                        <small><i class="bi bi-info-circle me-1"></i>Cole o bloco completo do script. Inclua IF NOT EXISTS, BEGIN/END e tudo que for necessário. A responsabilidade do conteúdo é do desenvolvedor.</small>
+                    </div>
+                    <InputTextArea class="form-control font-monospace" @bind-Value="entry.ScriptSql" rows="15" placeholder="Cole o script SQL completo aqui..." style="font-size: 0.85rem;" />
+                </div>
+
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-check-lg me-1"></i>Salvar
+                    </button>
+                    <a href="scripts" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private ScriptAlteracaoEntry entry = new();
+    private List<string> errosSintaxe = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            var loaded = await ScriptService.ObterAsync(Id.Value);
+            if (loaded is not null) entry = loaded;
+            else Nav.NavigateTo("scripts");
+        }
+    }
+
+    private async Task SalvarAsync()
+    {
+        errosSintaxe = SqlSyntaxValidator.Validar(entry.ScriptSql);
+        if (errosSintaxe.Count > 0) return;
+
+        if (Id.HasValue) await ScriptService.AtualizarAsync(entry);
+        else await ScriptService.CriarAsync(entry);
+        Nav.NavigateTo("scripts");
+    }
+}

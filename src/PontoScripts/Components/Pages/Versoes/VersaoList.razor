@@ -1,0 +1,86 @@
+@page "/versoes"
+@rendermode InteractiveServer
+@inject VersaoService VersaoService
+
+<PageTitle>Versões - PontoScripts</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Versões</h3>
+    <a href="versoes/criar" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Nova Versão
+    </a>
+</div>
+
+@if (versoes is null)
+{
+    <div class="text-center p-5"><span class="spinner-border"></span></div>
+}
+else if (versoes.Count == 0)
+{
+    <div class="alert alert-info">Nenhuma versão criada.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>Versão</th>
+                    <th>Data de Criação</th>
+                    <th>Data de Geração</th>
+                    <th>Status</th>
+                    <th>Globalizações</th>
+                    <th>Scripts</th>
+                    <th style="width: 150px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in versoes)
+                {
+                    <tr>
+                        <td><strong>@v.Numero</strong></td>
+                        <td>@v.DataCriacao.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@(v.DataGeracao?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                        <td><span class="badge @GetStatusBadge(v.Status)">@v.Status</span></td>
+                        <td>@v.VersaoGlobalizacoes.Count</td>
+                        <td>@v.VersaoScripts.Count</td>
+                        <td>
+                            <a href="versoes/@v.Id" class="btn btn-sm btn-outline-primary me-1" title="Preview">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            @if (v.Status == StatusVersao.Aberta)
+                            {
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ExcluirAsync(v)" title="Excluir">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Versao>? versoes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        versoes = await VersaoService.ListarAsync();
+    }
+
+    private async Task ExcluirAsync(Versao versao)
+    {
+        await VersaoService.ExcluirAsync(versao.Id);
+        versoes = await VersaoService.ListarAsync();
+    }
+
+    private string GetStatusBadge(StatusVersao status) => status switch
+    {
+        StatusVersao.Aberta => "bg-warning text-dark",
+        StatusVersao.Gerada => "bg-info",
+        StatusVersao.Liberada => "bg-success",
+        _ => "bg-secondary"
+    };
+}

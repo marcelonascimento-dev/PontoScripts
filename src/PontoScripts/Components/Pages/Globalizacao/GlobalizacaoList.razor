@@ -1,0 +1,75 @@
+@page "/globalizacao"
+@rendermode InteractiveServer
+@inject GlobalizacaoService GlobService
+
+<PageTitle>Globalização - PontoScripts</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Globalização</h3>
+    <a href="globalizacao/novo" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Nova Entrada
+    </a>
+</div>
+
+@if (entries is null)
+{
+    <div class="text-center p-5"><span class="spinner-border"></span></div>
+}
+else if (entries.Count == 0)
+{
+    <div class="alert alert-info">Nenhuma entrada de globalização cadastrada.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover bg-white">
+            <thead class="table-dark">
+                <tr>
+                    <th>Tipo</th>
+                    <th>Mensagem</th>
+                    <th>pt-BR</th>
+                    <th>en-US</th>
+                    <th>es-ES</th>
+                    <th style="width: 100px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in entries)
+                {
+                    <tr>
+                        <td><small>@e.Tipo</small></td>
+                        <td><strong>@e.Mensagem</strong></td>
+                        <td><small>@Truncar(e.TraducaoPtBR)</small></td>
+                        <td><small>@Truncar(e.TraducaoEnUS)</small></td>
+                        <td><small>@Truncar(e.TraducaoEsES)</small></td>
+                        <td>
+                            <a href="globalizacao/@e.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ExcluirAsync(e)"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<GlobalizacaoEntry>? entries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        entries = await GlobService.ListarAsync();
+    }
+
+    private async Task ExcluirAsync(GlobalizacaoEntry entry)
+    {
+        await GlobService.ExcluirAsync(entry.Id);
+        entries = await GlobService.ListarAsync();
+    }
+
+    private string Truncar(string texto, int max = 30)
+    {
+        if (string.IsNullOrEmpty(texto)) return "";
+        return texto.Length <= max ? texto : texto[..max] + "...";
+    }
+}

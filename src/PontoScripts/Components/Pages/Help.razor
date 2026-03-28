@@ -1,0 +1,385 @@
+@page "/ajuda"
+@rendermode InteractiveServer
+
+<PageTitle>Ajuda - PontoScripts</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">Como usar o PontoScripts</h3>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 mb-4">
+        <div class="card position-sticky" style="top: 1rem;">
+            <div class="card-header"><strong>Navegação</strong></div>
+            <div class="list-group list-group-flush">
+                <a href="#visao-geral" class="list-group-item list-group-item-action"><i class="bi bi-house-door me-2"></i>Visão Geral</a>
+                <a href="#fluxo" class="list-group-item list-group-item-action"><i class="bi bi-diagram-3 me-2"></i>Fluxo de Trabalho</a>
+                <a href="#items" class="list-group-item list-group-item-action"><i class="bi bi-clipboard-check me-2"></i>Items</a>
+                <a href="#globalizacao" class="list-group-item list-group-item-action"><i class="bi bi-translate me-2"></i>Globalização</a>
+                <a href="#scripts" class="list-group-item list-group-item-action"><i class="bi bi-file-earmark-code me-2"></i>Scripts</a>
+                <a href="#versoes" class="list-group-item list-group-item-action"><i class="bi bi-tags me-2"></i>Versões</a>
+                <a href="#encoding" class="list-group-item list-group-item-action"><i class="bi bi-shield-check me-2"></i>Encoding e Validação</a>
+                <a href="#faq" class="list-group-item list-group-item-action"><i class="bi bi-question-circle me-2"></i>Perguntas Frequentes</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-9">
+
+        <!-- Visão Geral -->
+        <div id="visao-geral" class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-house-door me-2"></i>Visão Geral</h5>
+            </div>
+            <div class="card-body">
+                <p>O <strong>PontoScripts</strong> substitui a edição direta dos arquivos <code>Globalizacao.sql</code> e <code>ScriptAlteracaoBanco.sql</code>, eliminando problemas de conflito de merge e erros de encoding.</p>
+
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <h6 class="text-danger"><i class="bi bi-x-circle me-2"></i>Antes (problema)</h6>
+                            <ul class="mb-0 small">
+                                <li>Todos editavam os mesmos 2 arquivos SQL gigantes</li>
+                                <li>Conflitos de merge frequentes</li>
+                                <li>Perda de scripts durante merges</li>
+                                <li>Erros de encoding (caracteres corrompidos)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100 border-success">
+                            <h6 class="text-success"><i class="bi bi-check-circle me-2"></i>Agora (solução)</h6>
+                            <ul class="mb-0 small">
+                                <li>Cada dev cadastra seus itens individualmente</li>
+                                <li>Zero conflito de merge</li>
+                                <li>Nada se perde - tudo fica registrado</li>
+                                <li>Validação automática de encoding</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="bi bi-info-circle me-2"></i>A ferramenta tem <strong>duas funcionalidades independentes</strong>: Globalização (traduções, vinculada a Items) e Scripts de Alteração de Banco (cadastro direto).
+                </div>
+            </div>
+        </div>
+
+        <!-- Fluxo de Trabalho -->
+        <div id="fluxo" class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Fluxo de Trabalho</h5>
+            </div>
+            <div class="card-body">
+                <h6>Para Desenvolvedores</h6>
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    <span class="badge bg-primary fs-6 p-2">1. Cadastrar Item/Script</span>
+                    <span class="text-muted align-self-center"><i class="bi bi-arrow-right"></i></span>
+                    <span class="badge bg-primary fs-6 p-2">2. Adicionar traduções ou SQL</span>
+                    <span class="text-muted align-self-center"><i class="bi bi-arrow-right"></i></span>
+                    <span class="badge bg-success fs-6 p-2">3. Pronto!</span>
+                </div>
+
+                <h6>Para Operações</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-warning text-dark fs-6 p-2">1. Criar Versão</span>
+                    <span class="text-muted align-self-center"><i class="bi bi-arrow-right"></i></span>
+                    <span class="badge bg-warning text-dark fs-6 p-2">2. Selecionar itens/scripts</span>
+                    <span class="text-muted align-self-center"><i class="bi bi-arrow-right"></i></span>
+                    <span class="badge bg-warning text-dark fs-6 p-2">3. Revisar preview</span>
+                    <span class="text-muted align-self-center"><i class="bi bi-arrow-right"></i></span>
+                    <span class="badge bg-success fs-6 p-2">4. Download dos .sql</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items -->
+        <div id="items" class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Items (Improvement / OS)</h5>
+            </div>
+            <div class="card-body">
+                <p>Items representam uma tarefa de desenvolvimento (improvement ou OS). Eles agrupam as <strong>entradas de globalização</strong> relacionadas.</p>
+
+                <h6>Como criar um Item</h6>
+                <ol>
+                    <li>Acesse <strong>Items</strong> no menu lateral</li>
+                    <li>Clique em <strong>Novo Item</strong></li>
+                    <li>Preencha:
+                        <ul>
+                            <li><strong>Número</strong> - O número do improvement ou OS (ex: <code>29501</code>)</li>
+                            <li><strong>Criado Por</strong> - Seu nome</li>
+                            <li><strong>Descrição</strong> - Breve descrição do que o item trata</li>
+                        </ul>
+                    </li>
+                    <li>Clique em <strong>Salvar</strong></li>
+                </ol>
+
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Items são usados apenas para agrupar <strong>globalizações</strong>. Scripts de alteração de banco são cadastrados separadamente.
+                </div>
+            </div>
+        </div>
+
+        <!-- Globalização -->
+        <div id="globalizacao" class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-translate me-2"></i>Globalização</h5>
+            </div>
+            <div class="card-body">
+                <p>Entradas de globalização são as traduções que alimentam a tabela <code>FREQ_GLOBALIZACAOMENSAGEM</code>. Cada entrada tem traduções em <strong>3 idiomas</strong>.</p>
+
+                <h6>Como cadastrar uma globalização</h6>
+                <ol>
+                    <li>Acesse <strong>Globalização</strong> no menu lateral (ou clique em "Adicionar" dentro de um Item)</li>
+                    <li>Clique em <strong>Nova Entrada</strong></li>
+                    <li>Preencha:
+                        <ul>
+                            <li><strong>Item</strong> - Selecione o item (improvement/OS) relacionado</li>
+                            <li><strong>Tipo (GLMTIPO)</strong> - Categoria da mensagem (ex: <code>Globalizacao.Geral.Comum</code>). O campo tem autocomplete com tipos já cadastrados</li>
+                            <li><strong>Mensagem (Chave)</strong> - A chave da mensagem em PascalCase (ex: <code>MensagemDeSucesso</code>)</li>
+                            <li><strong>Traduções</strong> - Preencha os 3 campos lado a lado: pt-BR, en-US e es-ES</li>
+                        </ul>
+                    </li>
+                    <li>Clique em <strong>Salvar</strong></li>
+                </ol>
+
+                <h6 class="mt-3">SQL gerado</h6>
+                <p>Para cada entrada, o sistema gera 3 chamadas (uma por idioma):</p>
+                <pre class="bg-dark text-light p-3 rounded small"><code>EXEC DBO.SP_PONTO_GLOBALIZACAO_INSERIR_SE_NAO_EXISTIR
+    @@Mensagem = N'MensagemDeSucesso',
+    @@Traducao = N'Operação realizada com sucesso',
+    @@Tipo = N'Globalizacao.Geral.Comum',
+    @@Idioma = N'pt-BR'
+GO</code></pre>
+
+                <div class="alert alert-danger mb-0">
+                    <i class="bi bi-shield-check me-2"></i><strong>Validação de encoding:</strong> Ao salvar, o sistema verifica se os textos contêm caracteres corrompidos (mojibake). Se detectar problemas, a entrada não será salva até que o texto seja corrigido.
+                </div>
+            </div>
+        </div>
+
+        <!-- Scripts -->
+        <div id="scripts" class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-code me-2"></i>Scripts de Alteração de Banco</h5>
+            </div>
+            <div class="card-body">
+                <p>Scripts de alteração são <strong>independentes de Items</strong>. Cada desenvolvedor cadastra seus blocos de SQL diretamente.</p>
+
+                <h6>Como cadastrar um script</h6>
+                <ol>
+                    <li>Acesse <strong>Scripts</strong> no menu lateral</li>
+                    <li>Clique em <strong>Novo Script</strong></li>
+                    <li>Preencha:
+                        <ul>
+                            <li><strong>OS / Improvement</strong> - Número da OS (opcional, apenas para referência)</li>
+                            <li><strong>Branch</strong> - A branch onde foi desenvolvido (ex: <code>improvement/item-29501</code>)</li>
+                            <li><strong>Criado Por</strong> - Seu nome</li>
+                            <li><strong>Descrição</strong> - O que o script faz</li>
+                            <li><strong>Ordem de Execução</strong> - Deixe 0 para auto-incremento</li>
+                            <li><strong>Script SQL</strong> - Cole o bloco completo do script</li>
+                        </ul>
+                    </li>
+                    <li>Clique em <strong>Salvar</strong></li>
+                </ol>
+
+                <div class="alert alert-primary mb-3">
+                    <h6 class="alert-heading"><i class="bi bi-exclamation-circle me-2"></i>Responsabilidade do Desenvolvedor</h6>
+                    <p class="mb-0">Cole o script <strong>completo</strong>, incluindo <code>IF NOT EXISTS</code>, <code>BEGIN/END</code> e tudo o que for necessário. O sistema <strong>não</strong> adiciona nenhum wrapper automaticamente. O conteúdo do script é de responsabilidade do dev.</p>
+                </div>
+
+                <h6>Exemplo de script correto</h6>
+                <pre class="bg-dark text-light p-3 rounded small"><code>IF NOT EXISTS(SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'FREQ_MARCACAO' AND COLUMN_NAME = 'MARNOVOCOLUNA')
+BEGIN
+    ALTER TABLE FREQ_MARCACAO ADD MARNOVOCOLUNA VARCHAR(100) NULL
+END</code></pre>
+
+                <h6 class="mt-3">Validação de sintaxe</h6>
+                <p>Ao salvar, o sistema faz validações básicas:</p>
+                <ul>
+                    <li><code>BEGIN</code> / <code>END</code> balanceados</li>
+                    <li>Parênteses <code>( )</code> balanceados</li>
+                    <li>Aspas simples <code>'</code> fechadas</li>
+                    <li>Comentários de bloco <code>/* */</code> fechados</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Versões -->
+        <div id="versoes" class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Versões (para Operações)</h5>
+            </div>
+            <div class="card-body">
+                <p>Versões agrupam os itens e scripts que serão lançados juntos. Ao criar uma versão, os arquivos SQL são gerados automaticamente.</p>
+
+                <h6>Como criar uma versão</h6>
+                <ol>
+                    <li>Acesse <strong>Versões</strong> no menu lateral</li>
+                    <li>Clique em <strong>Nova Versão</strong></li>
+                    <li>Informe o <strong>número da versão</strong> (ex: <code>2026.04</code>)</li>
+                    <li>Na seção <strong>Items - Globalização</strong>, selecione os items pendentes que entrarão na versão (todos vêm marcados por padrão)</li>
+                    <li>Na seção <strong>Scripts de Alteração</strong>, selecione os scripts pendentes</li>
+                    <li>Clique em <strong>Criar Versão</strong></li>
+                </ol>
+
+                <h6 class="mt-3">Após criar a versão</h6>
+                <p>A página de detalhe da versão mostra:</p>
+                <ul>
+                    <li><strong>Items e scripts incluídos</strong> - Lista completa do que entra na versão</li>
+                    <li><strong>Preview do SQL</strong> - Duas abas para visualizar o conteúdo dos arquivos gerados</li>
+                    <li><strong>Botões de download</strong> - Baixe <code>Globalizacao.sql</code> e <code>ScriptAlteracaoBanco.sql</code> prontos para deploy</li>
+                </ul>
+
+                <h6 class="mt-3">Status da versão</h6>
+                <div class="d-flex gap-3 flex-wrap">
+                    <div>
+                        <span class="badge bg-warning text-dark">Aberta</span>
+                        <small class="text-muted d-block">Recém-criada, pode ser editada ou excluída</small>
+                    </div>
+                    <div>
+                        <span class="badge bg-info">Gerada</span>
+                        <small class="text-muted d-block">Scripts foram baixados/revisados</small>
+                    </div>
+                    <div>
+                        <span class="badge bg-success">Liberada</span>
+                        <small class="text-muted d-block">Deploy realizado com sucesso</small>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Os arquivos gerados são <strong>UTF-8 com BOM</strong>, compatíveis com SQL Server Management Studio.
+                </div>
+            </div>
+        </div>
+
+        <!-- Encoding -->
+        <div id="encoding" class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Encoding e Validação</h5>
+            </div>
+            <div class="card-body">
+                <p>Um dos principais problemas que esta ferramenta resolve são os erros de encoding. Aqui está o que o sistema faz para prevenir isso:</p>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Validação</th>
+                                <th>O que detecta</th>
+                                <th>Exemplo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Mojibake</td>
+                                <td>Texto que foi convertido com encoding errado</td>
+                                <td><code>Ã£</code> ao invés de <code>ã</code></td>
+                            </tr>
+                            <tr>
+                                <td>Replacement Character</td>
+                                <td>Caractere Unicode de substituição</td>
+                                <td><code>&#xFFFD;</code> (U+FFFD)</td>
+                            </tr>
+                            <tr>
+                                <td>Round-trip UTF-8</td>
+                                <td>Texto que não sobrevive a uma conversão UTF-8</td>
+                                <td>Caracteres inválidos ou corrompidos</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-success mb-0">
+                    <i class="bi bi-check-circle me-2"></i><strong>Dica:</strong> Se o sistema bloquear o salvamento por erro de encoding, copie o texto de volta da fonte original (documento, e-mail, etc.) e cole novamente. Evite copiar de editores que possam ter alterado o encoding.
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div id="faq" class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-question-circle me-2"></i>Perguntas Frequentes</h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                                Preciso criar um Item para cadastrar um script de banco?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <strong>Não.</strong> Scripts de alteração de banco são independentes. Você cadastra diretamente na seção Scripts, sem precisar de um Item. Items são usados apenas para agrupar entradas de globalização.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                O campo OS no script é obrigatório?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <strong>Não.</strong> O campo OS é apenas uma referência para facilitar a rastreabilidade. Você pode deixar em branco se o script não estiver associado a uma OS específica.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                O sistema adiciona IF NOT EXISTS automaticamente no meu script?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <strong>Não.</strong> Você é responsável por colar o script completo, incluindo qualquer guarda de idempotência (<code>IF NOT EXISTS</code>, <code>IF NOT EXISTS(SELECT...)</code>, etc.). O sistema apenas valida sintaxe básica (parênteses, BEGIN/END, etc.).
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                Posso editar um item ou script depois de criado?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <strong>Sim.</strong> Enquanto o item ou script não estiver incluído em uma versão liberada, você pode editar livremente clicando nele na lista.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                O que acontece se eu cadastrar uma globalização com chave duplicada?
+                            </button>
+                        </h2>
+                        <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                O sistema <strong>bloqueia o salvamento</strong> e exibe um aviso. A combinação de <strong>Tipo + Mensagem</strong> deve ser única. Se você precisa alterar uma tradução existente, edite a entrada original ao invés de criar uma nova.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+                                Os arquivos SQL gerados já estão no formato correto para o SQL Server?
+                            </button>
+                        </h2>
+                        <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <strong>Sim.</strong> Os arquivos são gerados em UTF-8 com BOM, com separadores <code>GO</code> entre os comandos, e strings com prefixo <code>N'...'</code> para suporte a Unicode. Basta abrir no SSMS e executar.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

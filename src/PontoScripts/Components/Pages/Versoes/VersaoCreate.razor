@@ -1,0 +1,150 @@
+@page "/versoes/criar"
+@rendermode InteractiveServer
+@inject VersaoService VersaoService
+@inject GlobalizacaoService GlobService
+@inject ScriptAlteracaoService ScriptService
+@inject NavigationManager Nav
+
+<PageTitle>Nova Versão - PontoScripts</PageTitle>
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="versoes">Versões</a></li>
+        <li class="breadcrumb-item active">Nova</li>
+    </ol>
+</nav>
+
+<h3 class="mb-3">Nova Versão</h3>
+
+@if (globPendentes is null || scriptsPendentes is null)
+{
+    <div class="text-center p-5"><span class="spinner-border"></span></div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Número da Versão</label>
+                    <input type="text" class="form-control" @bind="versao.Numero" placeholder="Ex: 2026.04" />
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Observações</label>
+                    <input type="text" class="form-control" @bind="versao.Observacoes" placeholder="Observações opcionais..." />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Globalizações pendentes -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-translate me-2"></i>Globalização (@globPendentes.Count pendentes)</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-1" @onclick="SelecionarTodasGlob">Todos</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => globSelecionadas.Clear()">Nenhum</button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (globPendentes.Count == 0)
+            {
+                <div class="p-3 text-center text-muted">Nenhuma globalização pendente.</div>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var g in globPendentes)
+                    {
+                        <label class="list-group-item list-group-item-action d-flex align-items-center">
+                            <input type="checkbox" class="form-check-input me-3" checked="@globSelecionadas.Contains(g.Id)" @onchange="(e) => ToggleGlob(g.Id, (bool)e.Value!)" />
+                            <div class="flex-grow-1">
+                                <strong>@g.Tipo</strong>
+                                <span class="text-muted ms-2">@g.Mensagem</span>
+                            </div>
+                        </label>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Scripts pendentes -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-code me-2"></i>Scripts de Alteração (@scriptsPendentes.Count pendentes)</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-1" @onclick="SelecionarTodosScripts">Todos</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => scriptsSelecionados.Clear()">Nenhum</button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            @if (scriptsPendentes.Count == 0)
+            {
+                <div class="p-3 text-center text-muted">Nenhum script pendente.</div>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var script in scriptsPendentes)
+                    {
+                        <label class="list-group-item list-group-item-action d-flex align-items-center">
+                            <input type="checkbox" class="form-check-input me-3" checked="@scriptsSelecionados.Contains(script.Id)" @onchange="(e) => ToggleScript(script.Id, (bool)e.Value!)" />
+                            <div class="flex-grow-1">
+                                @if (!string.IsNullOrWhiteSpace(script.NumeroOS))
+                                {
+                                    <strong>OS @script.NumeroOS</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Sem OS</span>
+                                }
+                                <span class="ms-2">@script.Descricao</span>
+                                @if (!string.IsNullOrWhiteSpace(script.Branch))
+                                {
+                                    <small class="text-muted ms-2"><i class="bi bi-git me-1"></i>@script.Branch</small>
+                                }
+                                <small class="text-muted ms-2">(@script.CriadoPor)</small>
+                            </div>
+                        </label>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary" @onclick="CriarAsync" disabled="@((globSelecionadas.Count == 0 && scriptsSelecionados.Count == 0) || string.IsNullOrWhiteSpace(versao.Numero))">
+            <i class="bi bi-check-lg me-1"></i>Criar Versão (@globSelecionadas.Count globalização(ões), @scriptsSelecionados.Count script(s))
+        </button>
+        <a href="versoes" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+}
+
+@code {
+    private Versao versao = new();
+    private List<GlobalizacaoEntry>? globPendentes;
+    private List<ScriptAlteracaoEntry>? scriptsPendentes;
+    private HashSet<int> globSelecionadas = [];
+    private HashSet<int> scriptsSelecionados = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        globPendentes = await GlobService.ListarPendentesAsync();
+        scriptsPendentes = await ScriptService.ListarPendentesAsync();
+        globSelecionadas = new HashSet<int>(globPendentes.Select(g => g.Id));
+        scriptsSelecionados = new HashSet<int>(scriptsPendentes.Select(s => s.Id));
+    }
+
+    private void ToggleGlob(int id, bool selected) { if (selected) globSelecionadas.Add(id); else globSelecionadas.Remove(id); }
+    private void ToggleScript(int id, bool selected) { if (selected) scriptsSelecionados.Add(id); else scriptsSelecionados.Remove(id); }
+
+    private void SelecionarTodasGlob() { if (globPendentes is not null) globSelecionadas = new HashSet<int>(globPendentes.Select(g => g.Id)); }
+    private void SelecionarTodosScripts() { if (scriptsPendentes is not null) scriptsSelecionados = new HashSet<int>(scriptsPendentes.Select(s => s.Id)); }
+
+    private async Task CriarAsync()
+    {
+        var created = await VersaoService.CriarAsync(versao, globSelecionadas.ToList(), scriptsSelecionados.ToList());
+        Nav.NavigateTo($"versoes/{created.Id}");
+    }
+}
