@@ -1,0 +1,360 @@
+@page "/configuracoes"
+@rendermode InteractiveServer
+@inject ConfiguracaoService ConfigService
+
+<PageTitle>Configurações - PontoScripts</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="bi bi-gear me-2"></i>Configurações</h3>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Banco de Dados -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-database me-2"></i>Banco de Dados</h5>
+            </div>
+            <div class="card-body">
+                <!-- Provider -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Provider</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="provider" id="providerSqlite"
+                                   value="SQLite" checked="@(providerSelecionado == "SQLite")"
+                                   @onchange='() => AlterarProvider("SQLite")' />
+                            <label class="form-check-label" for="providerSqlite">
+                                <i class="bi bi-file-earmark me-1"></i>SQLite (local)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="provider" id="providerSqlServer"
+                                   value="SqlServer" checked="@(providerSelecionado == "SqlServer")"
+                                   @onchange='() => AlterarProvider("SqlServer")' />
+                            <label class="form-check-label" for="providerSqlServer">
+                                <i class="bi bi-cloud me-1"></i>SQL Server / Azure SQL
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                @if (providerSelecionado == "SQLite")
+                {
+                    <!-- SQLite Config -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Caminho do arquivo .db</label>
+                        <input type="text" class="form-control" @bind="caminhoSqlite" placeholder="C:\dados\pontoscripts.db" />
+                        <div class="form-text">Caminho absoluto do arquivo SQLite. Será criado automaticamente se não existir.</div>
+                    </div>
+
+                    <!-- Info SQLite -->
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <th style="width: 180px;">Arquivo atual</th>
+                                    <td><code>@caminhoSqliteAtual</code></td>
+                                </tr>
+                                <tr>
+                                    <th>Existe</th>
+                                    <td>
+                                        @if (sqliteExiste)
+                                        {
+                                            <span class="badge bg-success">Sim</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Não</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Tamanho</th>
+                                    <td>@FormatarTamanho(sqliteTamanho)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <!-- SQL Server / Azure Config -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Connection String</label>
+                        <textarea class="form-control font-monospace" rows="3" @bind="connectionString"
+                                  placeholder="Server=tcp:meuservidor.database.windows.net,1433;Initial Catalog=PontoScripts;Persist Security Info=False;User ID=admin;Password=***;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"></textarea>
+                        <div class="form-text">Connection string completa do SQL Server ou Azure SQL Database.</div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(connectionStringAtual))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Connection string atual (configurada)</label>
+                            <div class="bg-light p-2 rounded">
+                                <code class="small text-break">@MascararConnectionString(connectionStringAtual)</code>
+                            </div>
+                        </div>
+                    }
+                }
+
+                <hr />
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="Salvar" disabled="@salvando">
+                        @if (salvando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        <i class="bi bi-check-lg me-1"></i>Salvar Configuração
+                    </button>
+                    @if (providerSelecionado == "SqlServer" && !string.IsNullOrWhiteSpace(connectionString))
+                    {
+                        <button class="btn btn-outline-secondary" @onclick="TestarConexao" disabled="@testando">
+                            @if (testando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            <i class="bi bi-plug me-1"></i>Testar Conexão
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(mensagemSucesso))
+                {
+                    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>@mensagemSucesso
+                        <button type="button" class="btn-close" @onclick="() => mensagemSucesso = null"></button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(mensagemErro))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                        <i class="bi bi-x-circle me-2"></i>@mensagemErro
+                        <button type="button" class="btn-close" @onclick="() => mensagemErro = null"></button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(mensagemTeste))
+                {
+                    <div class="alert @(testeOk ? "alert-success" : "alert-danger") alert-dismissible fade show mt-3" role="alert">
+                        <i class="bi @(testeOk ? "bi-check-circle" : "bi-x-circle") me-2"></i>@mensagemTeste
+                        <button type="button" class="btn-close" @onclick="() => mensagemTeste = null"></button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Informações da Aplicação -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Informações da Aplicação</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <th style="width: 200px;">Provider ativo</th>
+                            <td>
+                                <span class="badge @(providerAtual == "SqlServer" ? "bg-primary" : "bg-secondary")">
+                                    @(providerAtual == "SqlServer" ? "SQL Server / Azure SQL" : "SQLite")
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Ambiente</th>
+                            <td><span class="badge @(ambiente == "Production" ? "bg-danger" : "bg-warning text-dark")">@ambiente</span></td>
+                        </tr>
+                        <tr>
+                            <th>appsettings.json</th>
+                            <td><code>@appSettingsPath</code></td>
+                        </tr>
+                        <tr>
+                            <th>.NET</th>
+                            <td><code>@System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-info mb-4">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Dica</h6>
+            </div>
+            <div class="card-body small">
+                <p>Após salvar a configuração, a aplicação precisa ser <strong>reiniciada</strong> para que a mudança tenha efeito.</p>
+                <p class="mb-0">O banco será criado e migrado automaticamente na próxima inicialização.</p>
+            </div>
+        </div>
+
+        @if (providerSelecionado == "SqlServer")
+        {
+            <div class="card border-warning mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Importante</h6>
+                </div>
+                <div class="card-body small">
+                    <p>Para SQL Server local, inclua <code>TrustServerCertificate=True</code> na connection string. Sem isso, a conexão falha por certificado SSL.</p>
+                    <p class="mb-0">Para Azure SQL com <code>Encrypt=True</code>, isso não é necessário.</p>
+                </div>
+            </div>
+
+            <div class="card border-secondary mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="bi bi-pc-display me-2"></i>SQL Server Local</h6>
+                </div>
+                <div class="card-body small">
+                    <p class="mb-1"><strong>Formato:</strong></p>
+                    <code class="small text-break">Data Source=localhost;Initial Catalog=PontoScriptDB;User ID=sa;Password=SuaSenha;TrustServerCertificate=True</code>
+                </div>
+            </div>
+
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-cloud me-2"></i>Azure SQL</h6>
+                </div>
+                <div class="card-body small">
+                    <p>Para criar um banco no Azure:</p>
+                    <ol class="mb-3">
+                        <li>Acesse o <strong>Portal Azure</strong></li>
+                        <li>Crie um <strong>SQL Database</strong></li>
+                        <li>Copie a <strong>connection string</strong> (ADO.NET)</li>
+                        <li>Substitua o <code>{your_password}</code> pela senha real</li>
+                        <li>Cole no campo ao lado e salve</li>
+                    </ol>
+                    <p class="mb-1"><strong>Formato:</strong></p>
+                    <code class="small text-break">Server=tcp:servidor.database.windows.net,1433;Initial Catalog=PontoScripts;User ID=admin;Password=SuaSenha;Encrypt=True;TrustServerCertificate=False;</code>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string providerAtual = "SQLite";
+    private string providerSelecionado = "SQLite";
+    private string connectionString = "";
+    private string connectionStringAtual = "";
+    private string caminhoSqlite = "";
+    private string caminhoSqliteAtual = "";
+    private string ambiente = "";
+    private string appSettingsPath = "";
+    private bool sqliteExiste;
+    private long sqliteTamanho;
+    private bool salvando;
+    private bool testando;
+    private bool testeOk;
+    private string? mensagemSucesso;
+    private string? mensagemErro;
+    private string? mensagemTeste;
+
+    protected override void OnInitialized()
+    {
+        CarregarDados();
+    }
+
+    private void CarregarDados()
+    {
+        providerAtual = ConfigService.ObterProvider();
+        providerSelecionado = providerAtual;
+        connectionStringAtual = ConfigService.ObterConnectionString();
+        connectionString = connectionStringAtual;
+        caminhoSqliteAtual = ConfigService.ObterCaminhoBancoSqlite();
+        caminhoSqlite = caminhoSqliteAtual;
+        ambiente = ConfigService.ObterAmbiente();
+        appSettingsPath = ConfigService.ObterAppSettingsPath();
+        sqliteTamanho = ConfigService.ObterTamanhoBancoSqlite();
+        sqliteExiste = File.Exists(caminhoSqliteAtual);
+    }
+
+    private void AlterarProvider(string provider)
+    {
+        providerSelecionado = provider;
+        LimparMensagens();
+    }
+
+    private async Task Salvar()
+    {
+        LimparMensagens();
+
+        if (providerSelecionado == "SqlServer" && string.IsNullOrWhiteSpace(connectionString))
+        {
+            mensagemErro = "Informe a connection string do SQL Server / Azure SQL.";
+            return;
+        }
+
+        if (providerSelecionado == "SQLite" && !string.IsNullOrWhiteSpace(caminhoSqlite) && !Path.IsPathRooted(caminhoSqlite))
+        {
+            mensagemErro = "Informe um caminho absoluto para o banco SQLite.";
+            return;
+        }
+
+        salvando = true;
+        try
+        {
+            await ConfigService.SalvarConfiguracaoAsync(
+                providerSelecionado,
+                providerSelecionado == "SqlServer" ? connectionString : null,
+                providerSelecionado == "SQLite" ? caminhoSqlite : null);
+
+            mensagemSucesso = "Configuração salva com sucesso no appsettings.json. Reinicie a aplicação para aplicar a mudança.";
+            CarregarDados();
+        }
+        catch (Exception ex)
+        {
+            mensagemErro = $"Erro ao salvar: {ex.Message}";
+        }
+        finally
+        {
+            salvando = false;
+        }
+    }
+
+    private async Task TestarConexao()
+    {
+        LimparMensagens();
+        testando = true;
+        try
+        {
+            using var connection = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
+            await connection.OpenAsync();
+            testeOk = true;
+            mensagemTeste = $"Conexão estabelecida com sucesso! Servidor: {connection.DataSource}, Banco: {connection.Database}";
+        }
+        catch (Exception ex)
+        {
+            testeOk = false;
+            mensagemTeste = $"Falha na conexão: {ex.Message}";
+        }
+        finally
+        {
+            testando = false;
+        }
+    }
+
+    private void LimparMensagens()
+    {
+        mensagemSucesso = null;
+        mensagemErro = null;
+        mensagemTeste = null;
+    }
+
+    private static string MascararConnectionString(string cs)
+    {
+        return System.Text.RegularExpressions.Regex.Replace(
+            cs, @"(Password|Pwd)\s*=\s*[^;]+", "$1=******",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private static string FormatarTamanho(long bytes)
+    {
+        if (bytes == 0) return "—";
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F2} MB";
+    }
+}

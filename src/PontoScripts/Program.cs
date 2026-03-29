@@ -7,16 +7,29 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Database
-var dbPath = builder.Configuration.GetValue<string>("DatabasePath")
-    ?? Path.Combine(AppContext.BaseDirectory, "gerenciador.db");
+var dbProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "SQLite";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite($"Data Source={dbPath}"));
+{
+    if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(connectionString))
+    {
+        options.UseSqlServer(connectionString);
+    }
+    else
+    {
+        var dbPath = builder.Configuration.GetValue<string>("DatabasePath")
+            ?? Path.Combine(AppContext.BaseDirectory, "gerenciador.db");
+        options.UseSqlite($"Data Source={dbPath}");
+    }
+});
 
 // Services
 builder.Services.AddScoped<GlobalizacaoService>();
 builder.Services.AddScoped<ScriptAlteracaoService>();
 builder.Services.AddScoped<VersaoService>();
 builder.Services.AddScoped<SqlGeneratorService>();
+builder.Services.AddSingleton<ConfiguracaoService>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -27,7 +40,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    if (dbProvider.Equals("SqlServer", StringComparison.OrdinalIgnoreCase))
+        db.Database.EnsureCreated();
+    else
+        db.Database.Migrate();
 }
 
 if (!app.Environment.IsDevelopment())

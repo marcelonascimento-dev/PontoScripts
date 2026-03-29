@@ -17,6 +17,9 @@ public class AppDbContext : DbContext
     {
         modelBuilder.Entity<GlobalizacaoEntry>(e =>
         {
+            e.Property(g => g.Tipo).HasMaxLength(450);
+            e.Property(g => g.Mensagem).HasMaxLength(450);
+            e.Property(g => g.AtributoAdicional).HasMaxLength(200);
             e.HasIndex(g => new { g.Tipo, g.Mensagem }).IsUnique();
         });
 
