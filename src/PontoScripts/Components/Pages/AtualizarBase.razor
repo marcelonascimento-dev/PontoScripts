@@ -1,0 +1,402 @@
+@page "/atualizar-base"
+@rendermode InteractiveServer
+@inject ScriptAlteracaoService ScriptService
+@inject GlobalizacaoService GlobService
+@inject SqlGeneratorService SqlGenerator
+@inject IJSRuntime JS
+
+<PageTitle>Atualizar Base - PontoScripts</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>Atualizar Base de Desenvolvimento</h3>
+        <small class="text-muted">Selecione o período e os itens para gerar o script de atualização da sua base local.</small>
+    </div>
+</div>
+
+<!-- Filtros de Período -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-funnel me-2"></i>Período</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <button class="btn @BtnClass("7d")" @onclick='() => AplicarPeriodo("7d")'>Últimos 7 dias</button>
+            <button class="btn @BtnClass("15d")" @onclick='() => AplicarPeriodo("15d")'>Últimos 15 dias</button>
+            <button class="btn @BtnClass("30d")" @onclick='() => AplicarPeriodo("30d")'>Últimos 30 dias</button>
+            <button class="btn @BtnClass("60d")" @onclick='() => AplicarPeriodo("60d")'>Últimos 60 dias</button>
+            <button class="btn @BtnClass("90d")" @onclick='() => AplicarPeriodo("90d")'>Últimos 90 dias</button>
+            <button class="btn @BtnClass("semana")" @onclick='() => AplicarPeriodo("semana")'>Esta semana</button>
+            <button class="btn @BtnClass("mes")" @onclick='() => AplicarPeriodo("mes")'>Este mês</button>
+            <button class="btn @BtnClass("ano")" @onclick='() => AplicarPeriodo("ano")'>Este ano</button>
+            <button class="btn @BtnClass("todos")" @onclick='() => AplicarPeriodo("todos")'>Todos</button>
+            <button class="btn @BtnClass("custom")" @onclick='() => AplicarPeriodo("custom")'>Personalizado</button>
+        </div>
+
+        @if (periodoSelecionado == "custom")
+        {
+            <div class="row g-3 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label">De</label>
+                    <input type="date" class="form-control" @bind="dataInicio" @bind:after="FiltrarAsync" />
+                </div>
+                <div class="col-auto">
+                    <label class="form-label">Até</label>
+                    <input type="date" class="form-control" @bind="dataFim" @bind:after="FiltrarAsync" />
+                </div>
+            </div>
+        }
+
+        @if (dataInicio.HasValue || dataFim.HasValue)
+        {
+            <div class="mt-2">
+                <small class="text-muted">
+                    <i class="bi bi-calendar-range me-1"></i>
+                    @(dataInicio?.ToString("dd/MM/yyyy") ?? "...") até @(dataFim?.ToString("dd/MM/yyyy") ?? "...")
+                </small>
+            </div>
+        }
+    </div>
+</div>
+
+@if (carregando)
+{
+    <div class="text-center p-5"><span class="spinner-border"></span></div>
+}
+else if (scripts is not null)
+{
+    <!-- Scripts de Alteração -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-file-earmark-code me-2"></i>Scripts de Alteração
+                <span class="badge bg-secondary ms-2">@scripts.Count</span>
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" @onclick="SelecionarTodosScripts">
+                    <i class="bi bi-check-all me-1"></i>Selecionar todos
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="DesmarcarTodosScripts">
+                    <i class="bi bi-x-lg me-1"></i>Desmarcar todos
+                </button>
+            </div>
+        </div>
+        @if (scripts.Count == 0)
+        {
+            <div class="card-body text-muted">Nenhum script encontrado no período.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>OS</th>
+                            <th>Descrição</th>
+                            <th>Branch</th>
+                            <th>Criado Por</th>
+                            <th>Data</th>
+                            <th>Ordem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in scripts)
+                        {
+                            <tr class="@(scriptsSelecionados.Contains(s.Id) ? "table-primary" : "")" style="cursor: pointer;" @onclick="() => ToggleScript(s.Id)">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input" checked="@scriptsSelecionados.Contains(s.Id)" @onclick:stopPropagation />
+                                </td>
+                                <td>@(s.NumeroOS ?? "-")</td>
+                                <td>@s.Descricao</td>
+                                <td><small class="text-muted">@(s.Branch ?? "-")</small></td>
+                                <td>@s.CriadoPor</td>
+                                <td>@s.DataCriacao.ToString("dd/MM/yyyy")</td>
+                                <td>@s.OrdemExecucao</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <!-- Globalizações -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-translate me-2"></i>Globalizações
+                <span class="badge bg-secondary ms-2">@globalizacoes.Count</span>
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" @onclick="SelecionarTodasGlob">
+                    <i class="bi bi-check-all me-1"></i>Selecionar todas
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="DesmarcarTodasGlob">
+                    <i class="bi bi-x-lg me-1"></i>Desmarcar todas
+                </button>
+            </div>
+        </div>
+        @if (globalizacoes.Count == 0)
+        {
+            <div class="card-body text-muted">Nenhuma globalização encontrada no período.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th>Tipo</th>
+                            <th>Mensagem</th>
+                            <th>pt-BR</th>
+                            <th>en-US</th>
+                            <th>es-ES</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in globalizacoes)
+                        {
+                            <tr class="@(globSelecionadas.Contains(g.Id) ? "table-primary" : "")" style="cursor: pointer;" @onclick="() => ToggleGlob(g.Id)">
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input" checked="@globSelecionadas.Contains(g.Id)" @onclick:stopPropagation />
+                                </td>
+                                <td><small>@g.Tipo</small></td>
+                                <td><strong>@g.Mensagem</strong></td>
+                                <td><small>@Truncar(g.TraducaoPtBR)</small></td>
+                                <td><small>@Truncar(g.TraducaoEnUS)</small></td>
+                                <td><small>@Truncar(g.TraducaoEsES)</small></td>
+                                <td>@g.DataCriacao.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <!-- Ações -->
+    @if (scriptsSelecionados.Count > 0 || globSelecionadas.Count > 0)
+    {
+        <div class="card border-success mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <strong>Selecionados:</strong>
+                        @if (scriptsSelecionados.Count > 0)
+                        {
+                            <span class="badge bg-primary ms-2">@scriptsSelecionados.Count script(s)</span>
+                        }
+                        @if (globSelecionadas.Count > 0)
+                        {
+                            <span class="badge bg-info ms-2">@globSelecionadas.Count globalização(ões)</span>
+                        }
+                    </div>
+                    <div class="d-flex gap-2">
+                        @if (scriptsSelecionados.Count > 0)
+                        {
+                            <button class="btn btn-success" @onclick="GerarScriptAlteracao">
+                                <i class="bi bi-file-earmark-code me-1"></i>Gerar ScriptAlteracaoBanco.sql
+                            </button>
+                        }
+                        @if (globSelecionadas.Count > 0)
+                        {
+                            <button class="btn btn-success" @onclick="GerarGlobalizacao">
+                                <i class="bi bi-translate me-1"></i>Gerar Globalizacao.sql
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Preview -->
+    @if (!string.IsNullOrEmpty(previewSql))
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Preview: @previewNome</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="CopiarPreview">
+                        <i class="bi bi-clipboard me-1"></i>@textoCopiado
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="DownloadPreview">
+                        <i class="bi bi-download me-1"></i>Download
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <pre class="p-3 m-0" style="max-height: 500px; overflow: auto; font-size: 0.8rem;"><code class="language-sql">@previewSql</code></pre>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private string periodoSelecionado = "30d";
+    private DateTime? dataInicio;
+    private DateTime? dataFim;
+    private bool carregando;
+
+    private List<ScriptAlteracaoEntry> scripts = [];
+    private List<GlobalizacaoEntry> globalizacoes = [];
+    private HashSet<int> scriptsSelecionados = [];
+    private HashSet<int> globSelecionadas = [];
+
+    private string previewSql = "";
+    private string previewNome = "";
+    private byte[]? previewBytes;
+    private string textoCopiado = "Copiar";
+
+    protected override async Task OnInitializedAsync()
+    {
+        CalcularDatas("30d");
+        await FiltrarAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!string.IsNullOrEmpty(previewSql))
+            await JS.InvokeVoidAsync("aplicarHighlight");
+    }
+
+    private async Task AplicarPeriodo(string periodo)
+    {
+        periodoSelecionado = periodo;
+        if (periodo != "custom")
+        {
+            CalcularDatas(periodo);
+            await FiltrarAsync();
+        }
+    }
+
+    private void CalcularDatas(string periodo)
+    {
+        var hoje = DateTime.Today;
+        switch (periodo)
+        {
+            case "7d":
+                dataInicio = hoje.AddDays(-7); dataFim = hoje; break;
+            case "15d":
+                dataInicio = hoje.AddDays(-15); dataFim = hoje; break;
+            case "30d":
+                dataInicio = hoje.AddDays(-30); dataFim = hoje; break;
+            case "60d":
+                dataInicio = hoje.AddDays(-60); dataFim = hoje; break;
+            case "90d":
+                dataInicio = hoje.AddDays(-90); dataFim = hoje; break;
+            case "semana":
+                var dow = (int)hoje.DayOfWeek;
+                var diffSeg = dow == 0 ? 6 : dow - 1;
+                dataInicio = hoje.AddDays(-diffSeg); dataFim = hoje; break;
+            case "mes":
+                dataInicio = new DateTime(hoje.Year, hoje.Month, 1); dataFim = hoje; break;
+            case "ano":
+                dataInicio = new DateTime(hoje.Year, 1, 1); dataFim = hoje; break;
+            case "todos":
+                dataInicio = null; dataFim = null; break;
+        }
+    }
+
+    private async Task FiltrarAsync()
+    {
+        carregando = true;
+        StateHasChanged();
+
+        var todosScripts = await ScriptService.ListarAsync();
+        var todasGlob = await GlobService.ListarAsync();
+
+        var fimDia = dataFim?.AddDays(1);
+
+        scripts = todosScripts
+            .Where(s => (!dataInicio.HasValue || s.DataCriacao >= dataInicio.Value)
+                     && (!fimDia.HasValue || s.DataCriacao < fimDia.Value))
+            .OrderBy(s => s.NumeroOS).ThenBy(s => s.OrdemExecucao)
+            .ToList();
+
+        globalizacoes = todasGlob
+            .Where(g => (!dataInicio.HasValue || g.DataCriacao >= dataInicio.Value)
+                     && (!fimDia.HasValue || g.DataCriacao < fimDia.Value))
+            .OrderBy(g => g.Tipo).ThenBy(g => g.Mensagem)
+            .ToList();
+
+        // Auto-selecionar todos
+        scriptsSelecionados = new HashSet<int>(scripts.Select(s => s.Id));
+        globSelecionadas = new HashSet<int>(globalizacoes.Select(g => g.Id));
+
+        previewSql = "";
+        previewNome = "";
+        previewBytes = null;
+        carregando = false;
+    }
+
+    private void ToggleScript(int id)
+    {
+        if (!scriptsSelecionados.Remove(id))
+            scriptsSelecionados.Add(id);
+    }
+
+    private void ToggleGlob(int id)
+    {
+        if (!globSelecionadas.Remove(id))
+            globSelecionadas.Add(id);
+    }
+
+    private void SelecionarTodosScripts() => scriptsSelecionados = new HashSet<int>(scripts.Select(s => s.Id));
+    private void DesmarcarTodosScripts() => scriptsSelecionados.Clear();
+    private void SelecionarTodasGlob() => globSelecionadas = new HashSet<int>(globalizacoes.Select(g => g.Id));
+    private void DesmarcarTodasGlob() => globSelecionadas.Clear();
+
+    private void GerarScriptAlteracao()
+    {
+        var selecionados = scripts.Where(s => scriptsSelecionados.Contains(s.Id)).ToList();
+        var versaoFake = new Versao
+        {
+            Numero = "dev-update",
+            VersaoScripts = selecionados.Select(s => new VersaoScript { Script = s }).ToList(),
+            VersaoGlobalizacoes = []
+        };
+        previewBytes = SqlGenerator.GerarScriptAlteracao(versaoFake);
+        previewSql = System.Text.Encoding.UTF8.GetString(previewBytes.AsSpan(3));
+        previewNome = "ScriptAlteracaoBanco.sql";
+    }
+
+    private void GerarGlobalizacao()
+    {
+        var selecionadas = globalizacoes.Where(g => globSelecionadas.Contains(g.Id)).ToList();
+        var versaoFake = new Versao
+        {
+            Numero = "dev-update",
+            VersaoGlobalizacoes = selecionadas.Select(g => new VersaoGlobalizacao { GlobalizacaoEntry = g }).ToList(),
+            VersaoScripts = []
+        };
+        previewBytes = SqlGenerator.GerarGlobalizacao(versaoFake);
+        previewSql = System.Text.Encoding.UTF8.GetString(previewBytes.AsSpan(3));
+        previewNome = "Globalizacao.sql";
+    }
+
+    private async Task CopiarPreview()
+    {
+        await JS.InvokeVoidAsync("copiarTexto", previewSql);
+        textoCopiado = "Copiado!";
+        StateHasChanged();
+        await Task.Delay(2000);
+        textoCopiado = "Copiar";
+    }
+
+    private async Task DownloadPreview()
+    {
+        if (previewBytes is null) return;
+        var base64 = Convert.ToBase64String(previewBytes);
+        await JS.InvokeVoidAsync("downloadArquivo", previewNome, base64);
+    }
+
+    private string BtnClass(string periodo) =>
+        periodoSelecionado == periodo ? "btn-primary" : "btn-outline-secondary";
+
+    private static string Truncar(string texto, int max = 25) =>
+        string.IsNullOrEmpty(texto) ? "" : texto.Length <= max ? texto : texto[..max] + "...";
+}
