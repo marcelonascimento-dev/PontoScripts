@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @inject ScriptAlteracaoService ScriptService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>@(Id.HasValue ? "Editar Script" : "Novo Script")</PageTitle>
 
@@ -56,7 +57,15 @@
                 </div>
 
                 <div class="col-12">
-                    <label class="form-label">Script SQL</label>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label">Script SQL</label>
+                        @if (!string.IsNullOrWhiteSpace(entry.ScriptSql))
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary mb-1" @onclick="CopiarScriptAsync">
+                                <i class="bi bi-clipboard me-1"></i>@textoCopiado
+                            </button>
+                        }
+                    </div>
                     <div class="alert alert-info py-2">
                         <small><i class="bi bi-info-circle me-1"></i>Cole o bloco completo do script. Inclua IF NOT EXISTS, BEGIN/END e tudo que for necessário. A responsabilidade do conteúdo é do desenvolvedor.</small>
                     </div>
@@ -79,6 +88,7 @@
 
     private ScriptAlteracaoEntry entry = new();
     private List<string> errosSintaxe = [];
+    private string textoCopiado = "Copiar";
 
     protected override async Task OnInitializedAsync()
     {
@@ -88,6 +98,15 @@
             if (loaded is not null) entry = loaded;
             else Nav.NavigateTo("scripts");
         }
+    }
+
+    private async Task CopiarScriptAsync()
+    {
+        await JS.InvokeVoidAsync("copiarTexto", entry.ScriptSql);
+        textoCopiado = "Copiado!";
+        StateHasChanged();
+        await Task.Delay(2000);
+        textoCopiado = "Copiar";
     }
 
     private async Task SalvarAsync()

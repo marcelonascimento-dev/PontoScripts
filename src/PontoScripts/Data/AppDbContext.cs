@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Versao> Versoes => Set<Versao>();
     public DbSet<VersaoGlobalizacao> VersaoGlobalizacoes => Set<VersaoGlobalizacao>();
     public DbSet<VersaoScript> VersaoScripts => Set<VersaoScript>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +41,13 @@ public class AppDbContext : DbContext
             e.HasKey(vs => new { vs.VersaoId, vs.ScriptAlteracaoEntryId });
             e.HasOne(vs => vs.Versao).WithMany(v => v.VersaoScripts).HasForeignKey(vs => vs.VersaoId);
             e.HasOne(vs => vs.Script).WithMany(s => s.VersaoScripts).HasForeignKey(vs => vs.ScriptAlteracaoEntryId);
+        });
+
+        modelBuilder.Entity<Usuario>(e =>
+        {
+            e.Property(u => u.Email).HasMaxLength(450);
+            e.HasIndex(u => u.Email).IsUnique();
+            e.Property(u => u.Perfil).HasConversion<string>();
         });
     }
 }

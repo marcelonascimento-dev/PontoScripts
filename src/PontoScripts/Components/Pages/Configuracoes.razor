@@ -146,6 +146,59 @@
             </div>
         </div>
 
+        <!-- Autenticação Microsoft -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-microsoft me-2"></i>Autenticação Microsoft (Entra ID)</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Configure a autenticação com contas Microsoft corporativas. Após configurar, todos os usuários precisarão fazer login com o email da empresa.</p>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tenant ID (Directory ID)</label>
+                    <input type="text" class="form-control" @bind="azureTenantId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                    <div class="form-text">ID do diretório Azure AD da sua organização.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Client ID (Application ID)</label>
+                    <input type="text" class="form-control" @bind="azureClientId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                    <div class="form-text">ID do App Registration no Azure AD.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Client Secret</label>
+                    <input type="password" class="form-control" @bind="azureClientSecret" placeholder="***" />
+                    <div class="form-text">Secret gerado no App Registration (Certificates & secrets).</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="SalvarAzureAd" disabled="@salvandoAzure">
+                        @if (salvandoAzure)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        <i class="bi bi-check-lg me-1"></i>Salvar Autenticação
+                    </button>
+                </div>
+
+                @if (azureAdConfigurado)
+                {
+                    <div class="alert alert-success mt-3 py-2">
+                        <i class="bi bi-check-circle me-1"></i>Autenticação Microsoft configurada e ativa.
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(mensagemAzure))
+                {
+                    <div class="alert @(azureErro ? "alert-danger" : "alert-success") alert-dismissible fade show mt-3">
+                        @mensagemAzure
+                        <button type="button" class="btn-close" @onclick="() => mensagemAzure = null"></button>
+                    </div>
+                }
+            </div>
+        </div>
+
         <!-- Informações da Aplicação -->
         <div class="card mb-4">
             <div class="card-header">
@@ -188,6 +241,25 @@
             <div class="card-body small">
                 <p>Após salvar a configuração, a aplicação precisa ser <strong>reiniciada</strong> para que a mudança tenha efeito.</p>
                 <p class="mb-0">O banco será criado e migrado automaticamente na próxima inicialização.</p>
+            </div>
+        </div>
+
+        <div class="card border-primary mb-4">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-microsoft me-2"></i>Configurar Azure AD</h6>
+            </div>
+            <div class="card-body small">
+                <p>Para autenticar com contas Microsoft:</p>
+                <ol class="mb-2">
+                    <li>Acesse <strong>portal.azure.com</strong></li>
+                    <li>Vá em <strong>Microsoft Entra ID</strong> > <strong>App registrations</strong></li>
+                    <li>Clique <strong>New registration</strong></li>
+                    <li>Nome: <code>PontoScripts</code></li>
+                    <li>Redirect URI: <code>https://seudominio/signin-oidc</code></li>
+                    <li>Copie o <strong>Application (client) ID</strong> e <strong>Directory (tenant) ID</strong></li>
+                    <li>Em <strong>Certificates & secrets</strong>, crie um <strong>Client secret</strong></li>
+                </ol>
+                <p class="mb-0">Cole os valores no formulário ao lado e reinicie a aplicação.</p>
             </div>
         </div>
 
@@ -251,6 +323,13 @@
     private string? mensagemSucesso;
     private string? mensagemErro;
     private string? mensagemTeste;
+    private string azureTenantId = "";
+    private string azureClientId = "";
+    private string azureClientSecret = "";
+    private bool azureAdConfigurado;
+    private bool salvandoAzure;
+    private string? mensagemAzure;
+    private bool azureErro;
 
     protected override void OnInitialized()
     {
@@ -269,6 +348,10 @@
         appSettingsPath = ConfigService.ObterAppSettingsPath();
         sqliteTamanho = ConfigService.ObterTamanhoBancoSqlite();
         sqliteExiste = File.Exists(caminhoSqliteAtual);
+        azureTenantId = ConfigService.ObterAzureAdTenantId();
+        azureClientId = ConfigService.ObterAzureAdClientId();
+        azureClientSecret = ConfigService.ObterAzureAdClientSecret();
+        azureAdConfigurado = ConfigService.AzureAdConfigurado();
     }
 
     private void AlterarProvider(string provider)
@@ -348,6 +431,35 @@
         return System.Text.RegularExpressions.Regex.Replace(
             cs, @"(Password|Pwd)\s*=\s*[^;]+", "$1=******",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private async Task SalvarAzureAd()
+    {
+        mensagemAzure = null;
+        if (string.IsNullOrWhiteSpace(azureTenantId) || string.IsNullOrWhiteSpace(azureClientId))
+        {
+            mensagemAzure = "Tenant ID e Client ID são obrigatórios.";
+            azureErro = true;
+            return;
+        }
+
+        salvandoAzure = true;
+        try
+        {
+            await ConfigService.SalvarAzureAdAsync(azureTenantId, azureClientId, azureClientSecret);
+            mensagemAzure = "Configuração de autenticação salva. Reinicie a aplicação para ativar.";
+            azureErro = false;
+            azureAdConfigurado = true;
+        }
+        catch (Exception ex)
+        {
+            mensagemAzure = $"Erro ao salvar: {ex.Message}";
+            azureErro = true;
+        }
+        finally
+        {
+            salvandoAzure = false;
+        }
     }
 
     private static string FormatarTamanho(long bytes)

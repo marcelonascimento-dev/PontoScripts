@@ -3,6 +3,7 @@
 @inject VersaoService VersaoService
 @inject SqlGeneratorService SqlGenerator
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>Versão @(versao?.Numero ?? "") - PontoScripts</PageTitle>
 
@@ -116,21 +117,27 @@ else
             </ul>
         </div>
         <div class="card-body">
-            <div class="mb-3">
+            <div class="mb-3 d-flex gap-2">
                 @if (abaAtiva == "glob")
                 {
                     <a href="/api/versao/@versao.Id/download/globalizacao" class="btn btn-outline-primary" target="_blank">
                         <i class="bi bi-download me-1"></i>Download Globalizacao.sql
                     </a>
+                    <button class="btn btn-outline-secondary" @onclick="() => CopiarAsync(previewGlob)">
+                        <i class="bi bi-clipboard me-1"></i>@textoCopiado
+                    </button>
                 }
                 else
                 {
                     <a href="/api/versao/@versao.Id/download/scriptalteracao" class="btn btn-outline-primary" target="_blank">
                         <i class="bi bi-download me-1"></i>Download ScriptAlteracaoBanco.sql
                     </a>
+                    <button class="btn btn-outline-secondary" @onclick="() => CopiarAsync(previewScript)">
+                        <i class="bi bi-clipboard me-1"></i>@textoCopiado
+                    </button>
                 }
             </div>
-            <pre class="bg-dark text-light p-3 rounded" style="max-height: 600px; overflow-y: auto; font-size: 0.8rem;"><code>@(abaAtiva == "glob" ? previewGlob : previewScript)</code></pre>
+            <pre class="p-3 rounded" style="max-height: 600px; overflow-y: auto; font-size: 0.8rem;"><code class="language-sql">@(abaAtiva == "glob" ? previewGlob : previewScript)</code></pre>
         </div>
     </div>
 }
@@ -142,6 +149,7 @@ else
     private string abaAtiva = "glob";
     private string previewGlob = "";
     private string previewScript = "";
+    private string textoCopiado = "Copiar";
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,6 +177,21 @@ else
     {
         await VersaoService.MarcarComoLiberadaAsync(Id);
         versao = await VersaoService.ObterAsync(Id);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (versao is not null)
+            await JS.InvokeVoidAsync("aplicarHighlight");
+    }
+
+    private async Task CopiarAsync(string texto)
+    {
+        await JS.InvokeVoidAsync("copiarTexto", texto);
+        textoCopiado = "Copiado!";
+        StateHasChanged();
+        await Task.Delay(2000);
+        textoCopiado = "Copiar";
     }
 
     private string GetStatusBadge(StatusVersao status) => status switch

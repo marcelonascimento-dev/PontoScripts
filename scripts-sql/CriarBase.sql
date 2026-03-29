@@ -91,6 +91,22 @@ BEGIN
 END
 GO
 
+-- Tabela: Usuarios
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Usuarios]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[Usuarios] (
+        [Id]            INT             IDENTITY(1,1) NOT NULL,
+        [Nome]          NVARCHAR(MAX)   NOT NULL DEFAULT N'',
+        [Email]         NVARCHAR(450)   NOT NULL DEFAULT N'',
+        [SenhaHash]     NVARCHAR(MAX)   NOT NULL DEFAULT N'',
+        [Perfil]        NVARCHAR(MAX)   NOT NULL DEFAULT N'Dev',
+        [Ativo]         BIT             NOT NULL DEFAULT 1,
+        [DataCriacao]   DATETIME2(7)    NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT [PK_Usuarios] PRIMARY KEY CLUSTERED ([Id])
+    )
+END
+GO
+
 -- ============================================================
 -- 3. ÍNDICES
 -- ============================================================
@@ -116,6 +132,14 @@ IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_VersaoScripts_ScriptAl
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_VersaoScripts_ScriptAlteracaoEntryId]
     ON [dbo].[VersaoScripts] ([ScriptAlteracaoEntryId])
+END
+GO
+
+-- Índice único: Email do Usuário
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Usuarios_Email' AND object_id = OBJECT_ID(N'[dbo].[Usuarios]'))
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_Usuarios_Email]
+    ON [dbo].[Usuarios] ([Email])
 END
 GO
 

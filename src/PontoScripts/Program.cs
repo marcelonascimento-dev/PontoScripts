@@ -1,7 +1,13 @@
 using PontoScripts.Components;
 using PontoScripts.Data;
+using PontoScripts.Models;
 using PontoScripts.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Web;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,7 +35,29 @@ builder.Services.AddScoped<GlobalizacaoService>();
 builder.Services.AddScoped<ScriptAlteracaoService>();
 builder.Services.AddScoped<VersaoService>();
 builder.Services.AddScoped<SqlGeneratorService>();
+builder.Services.AddScoped<ImportExportService>();
+builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<ConfiguracaoService>();
+
+// Authentication — Microsoft Entra ID (Azure AD)
+var azureAdSection = builder.Configuration.GetSection("AzureAd");
+if (azureAdSection.Exists() && !string.IsNullOrEmpty(azureAdSection["ClientId"]))
+{
+    builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApp(azureAdSection);
+
+    builder.Services.AddAuthorization(options =>
+    {
+        options.FallbackPolicy = options.DefaultPolicy;
+    });
+}
+else
+{
+    // Sem Azure AD configurado — acesso livre
+    builder.Services.AddAuthentication();
+    builder.Services.AddAuthorization();
+}
+builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -53,6 +81,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
 app.MapStaticAssets();
 
@@ -74,6 +104,52 @@ app.MapGet("/api/versao/{id:int}/download/scriptalteracao", async (int id, Versa
     var bytes = sqlGenerator.GerarScriptAlteracao(versao);
     return Results.File(bytes, "application/sql", $"ScriptAlteracaoBanco_v{versao.Numero}.sql");
 });
+
+// Auth endpoints
+app.MapGet("/api/auth/logout", async (HttpContext ctx) =>
+{
+    await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    await ctx.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
+    return Results.Redirect("/");
+});
+
+// Export endpoints
+app.MapGet("/api/export/globalizacao", async (ImportExportService svc) =>
+{
+    var bytes = await svc.ExportarGlobalizacoesAsync();
+    return Results.File(bytes, "application/json", "globalizacoes.json");
+});
+
+app.MapGet("/api/export/scripts", async (ImportExportService svc) =>
+{
+    var bytes = await svc.ExportarScriptsAsync();
+    return Results.File(bytes, "application/json", "scripts.json");
+});
+
+// Import endpoints
+app.MapPost("/api/import/globalizacao", async (HttpRequest request, ImportExportService svc) =>
+{
+    var form = await request.ReadFormAsync();
+    var file = form.Files.GetFile("arquivo");
+    if (file is null || file.Length == 0)
+        return Results.BadRequest(new { erro = "Nenhum arquivo enviado." });
+
+    using var stream = file.OpenReadStream();
+    var result = await svc.ImportarGlobalizacoesAsync(stream);
+    return Results.Ok(result);
+}).DisableAntiforgery();
+
+app.MapPost("/api/import/scripts", async (HttpRequest request, ImportExportService svc) =>
+{
+    var form = await request.ReadFormAsync();
+    var file = form.Files.GetFile("arquivo");
+    if (file is null || file.Length == 0)
+        return Results.BadRequest(new { erro = "Nenhum arquivo enviado." });
+
+    using var stream = file.OpenReadStream();
+    var result = await svc.ImportarScriptsAsync(stream);
+    return Results.Ok(result);
+}).DisableAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

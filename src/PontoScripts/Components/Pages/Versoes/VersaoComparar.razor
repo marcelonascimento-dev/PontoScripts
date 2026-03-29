@@ -1,0 +1,156 @@
+@page "/versoes/comparar"
+@rendermode InteractiveServer
+@inject VersaoService VersaoService
+@inject SqlGeneratorService SqlGenerator
+@inject IJSRuntime JS
+
+<PageTitle>Comparar Versões - PontoScripts</PageTitle>
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="versoes">Versões</a></li>
+        <li class="breadcrumb-item active">Comparar</li>
+    </ol>
+</nav>
+
+<h3 class="mb-4"><i class="bi bi-arrow-left-right me-2"></i>Comparar Versões</h3>
+
+@if (versoes is null)
+{
+    <div class="text-center p-5"><span class="spinner-border"></span></div>
+}
+else if (versoes.Count < 2)
+{
+    <div class="alert alert-info">É necessário ter pelo menos 2 versões para comparar.</div>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-5">
+            <label class="form-label fw-bold">Versão A</label>
+            <select class="form-select" @onchange="e => SelecionarVersaoA(e)">
+                <option value="">Selecione...</option>
+                @foreach (var v in versoes)
+                {
+                    <option value="@v.Id">@v.Numero (@v.Status)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end justify-content-center">
+            <i class="bi bi-arrow-left-right fs-3 text-muted"></i>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label fw-bold">Versão B</label>
+            <select class="form-select" @onchange="e => SelecionarVersaoB(e)">
+                <option value="">Selecione...</option>
+                @foreach (var v in versoes)
+                {
+                    <option value="@v.Id">@v.Numero (@v.Status)</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (versaoA is not null && versaoB is not null)
+    {
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link @(aba == "glob" ? "active" : "")" @onclick='() => aba = "glob"'>
+                    <i class="bi bi-translate me-1"></i>Globalizacao.sql
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(aba == "script" ? "active" : "")" @onclick='() => aba = "script"'>
+                    <i class="bi bi-file-earmark-code me-1"></i>ScriptAlteracaoBanco.sql
+                </button>
+            </li>
+        </ul>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-dark text-light py-1">
+                        <small><strong>@versaoA.Numero</strong></small>
+                    </div>
+                    <pre class="m-0 p-2" style="max-height: 600px; overflow: auto; font-size: 0.75rem;">@foreach (var linha in ObterLinhasComparadas(true))
+{<span style="@linha.Css display:block;">@linha.Texto</span>}</pre>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-dark text-light py-1">
+                        <small><strong>@versaoB.Numero</strong></small>
+                    </div>
+                    <pre class="m-0 p-2" style="max-height: 600px; overflow: auto; font-size: 0.75rem;">@foreach (var linha in ObterLinhasComparadas(false))
+{<span style="@linha.Css display:block;">@linha.Texto</span>}</pre>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<Versao>? versoes;
+    private Versao? versaoA;
+    private Versao? versaoB;
+    private string aba = "glob";
+
+    private string previewGlobA = "", previewScriptA = "";
+    private string previewGlobB = "", previewScriptB = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        versoes = await VersaoService.ListarAsync();
+    }
+
+    private void SelecionarVersaoA(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            versaoA = versoes?.FirstOrDefault(v => v.Id == id);
+            if (versaoA is not null) GerarPreviews(versaoA, ref previewGlobA, ref previewScriptA);
+        }
+        else versaoA = null;
+    }
+
+    private void SelecionarVersaoB(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            versaoB = versoes?.FirstOrDefault(v => v.Id == id);
+            if (versaoB is not null) GerarPreviews(versaoB, ref previewGlobB, ref previewScriptB);
+        }
+        else versaoB = null;
+    }
+
+    private List<LinhaComparada> ObterLinhasComparadas(bool ladoA)
+    {
+        var textoA = aba == "glob" ? previewGlobA : previewScriptA;
+        var textoB = aba == "glob" ? previewGlobB : previewScriptB;
+        var linhasA = textoA.Split('\n');
+        var linhasB = textoB.Split('\n');
+        var max = Math.Max(linhasA.Length, linhasB.Length);
+        var resultado = new List<LinhaComparada>(max);
+        for (int i = 0; i < max; i++)
+        {
+            var la = i < linhasA.Length ? linhasA[i] : "";
+            var lb = i < linhasB.Length ? linhasB[i] : "";
+            var diferente = la != lb;
+            resultado.Add(new LinhaComparada(
+                ladoA ? la : lb,
+                diferente ? (ladoA ? "background-color: #ffeef0;" : "background-color: #e6ffec;") : ""
+            ));
+        }
+        return resultado;
+    }
+
+    private record LinhaComparada(string Texto, string Css);
+
+    private void GerarPreviews(Versao versao, ref string glob, ref string script)
+    {
+        var globBytes = SqlGenerator.GerarGlobalizacao(versao);
+        glob = System.Text.Encoding.UTF8.GetString(globBytes.AsSpan(3));
+        var scriptBytes = SqlGenerator.GerarScriptAlteracao(versao);
+        script = System.Text.Encoding.UTF8.GetString(scriptBytes.AsSpan(3));
+    }
+}

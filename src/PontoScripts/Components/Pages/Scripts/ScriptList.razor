@@ -1,15 +1,33 @@
 @page "/scripts"
 @rendermode InteractiveServer
 @inject ScriptAlteracaoService ScriptService
+@inject NavigationManager Nav
 
 <PageTitle>Scripts - PontoScripts</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="mb-0">Scripts de Alteração</h3>
-    <a href="scripts/novo" class="btn btn-primary">
-        <i class="bi bi-plus-circle me-1"></i>Novo Script
-    </a>
+    <div class="d-flex gap-2">
+        <a href="/api/export/scripts" class="btn btn-outline-success" target="_blank">
+            <i class="bi bi-download me-1"></i>Exportar JSON
+        </a>
+        <label class="btn btn-outline-info mb-0">
+            <i class="bi bi-upload me-1"></i>Importar JSON
+            <InputFile OnChange="ImportarAsync" accept=".json" style="display:none" />
+        </label>
+        <a href="scripts/novo" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Novo Script
+        </a>
+    </div>
 </div>
+
+@if (importMsg is not null)
+{
+    <div class="alert @(importErro ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @importMsg
+        <button type="button" class="btn-close" @onclick="() => importMsg = null"></button>
+    </div>
+}
 
 <div class="mb-3">
     <div class="input-group" style="max-width: 400px;">
@@ -76,6 +94,8 @@ else
 @code {
     private List<ScriptAlteracaoEntry>? entries;
     private string busca = "";
+    private string? importMsg;
+    private bool importErro;
 
     protected override async Task OnInitializedAsync()
     {
@@ -92,4 +112,41 @@ else
         await ScriptService.ExcluirAsync(entry.Id);
         entries = await ScriptService.ListarAsync(string.IsNullOrWhiteSpace(busca) ? null : busca);
     }
+
+    private async Task ImportarAsync(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            ms.Position = 0;
+            content.Add(new StreamContent(ms), "arquivo", e.File.Name);
+
+            using var http = new HttpClient();
+            var baseUri = Nav.BaseUri.TrimEnd('/');
+            var response = await http.PostAsync($"{baseUri}/api/import/scripts", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ImportResultDto>();
+                importMsg = $"Importação concluída: {result?.Importados ?? 0} importados, {result?.Ignorados ?? 0} ignorados.";
+                importErro = false;
+                entries = await ScriptService.ListarAsync();
+            }
+            else
+            {
+                importMsg = "Erro ao importar arquivo.";
+                importErro = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            importMsg = $"Erro: {ex.Message}";
+            importErro = true;
+        }
+    }
+
+    private record ImportResultDto(int Importados, int Ignorados, List<string>? Erros);
 }
