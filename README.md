@@ -1,15 +1,6 @@
 # PontoScripts
 
-Aplicação web interna para gerenciamento de scripts SQL do produto **Ponto/Frequência** (sistema de RH/ponto eletrônico).
-
-## Problema
-
-O desenvolvimento do Ponto/Frequência envolve dois arquivos SQL monolíticos editados por toda a equipe:
-
-- **`Globalizacao.sql`** (~41 mil linhas) — traduções da aplicação em pt-BR, en-US e es-ES
-- **`ScriptAlteracaoBanco.sql`** (~9 mil linhas) — alterações de schema do banco de dados
-
-Edição simultânea desses arquivos causa **conflitos de merge** e **corrupção de encoding**. O PontoScripts resolve isso permitindo que cada desenvolvedor cadastre seus itens individualmente, e a equipe de operações gere os arquivos SQL consolidados por versão.
+Aplicação web interna para gerenciamento centralizado de scripts SQL e traduções (globalização), com geração de arquivos versionados prontos para deploy.
 
 ## Funcionalidades
 
