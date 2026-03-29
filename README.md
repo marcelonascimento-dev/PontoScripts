@@ -1,6 +1,6 @@
 # PontoScripts
 
-Aplicação web interna para gerenciamento de scripts SQL do produto **Ponto/Frequência** (sistema de RH/ponto eletrônico da LG).
+Aplicação web interna para gerenciamento de scripts SQL do produto **Ponto/Frequência** (sistema de RH/ponto eletrônico).
 
 ## Problema
 
