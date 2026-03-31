@@ -9,6 +9,7 @@ public class GlobalizacaoEntry
     public string TraducaoEnUS { get; set; } = string.Empty;
     public string TraducaoEsES { get; set; } = string.Empty;
     public string AtributoAdicional { get; set; } = "N";
+    public string? Branch { get; set; }
     public DateTime DataCriacao { get; set; } = DateTime.Now;
 
     public List<VersaoGlobalizacao> VersaoGlobalizacoes { get; set; } = [];

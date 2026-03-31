@@ -126,6 +126,38 @@ app.MapGet("/api/export/scripts", async (ImportExportService svc) =>
     return Results.File(bytes, "application/json", "scripts.json");
 });
 
+// Validation endpoint — used by Azure DevOps build validation pipeline
+// Query params: verificarScripts=true&verificarGlobalizacao=true
+app.MapGet("/api/validacao/branch/{branch}", async (
+    string branch,
+    bool? verificarScripts,
+    bool? verificarGlobalizacao,
+    AppDbContext db) =>
+{
+    var erros = new List<string>();
+
+    var qtdScripts = await db.ScriptAlteracaoEntries
+        .CountAsync(s => s.Branch != null && s.Branch == branch);
+
+    var qtdGlobalizacoes = await db.GlobalizacaoEntries
+        .CountAsync(g => g.Branch != null && g.Branch == branch);
+
+    if (verificarScripts == true && qtdScripts == 0)
+        erros.Add("Alterações em mapeamentos NHibernate detectadas, mas nenhum script de alteração de banco foi cadastrado para a branch.");
+
+    if (verificarGlobalizacao == true && qtdGlobalizacoes == 0)
+        erros.Add("Novas globalizações detectadas no código, mas nenhuma entrada de globalização foi cadastrada para a branch.");
+
+    return Results.Ok(new
+    {
+        branch,
+        aprovado = erros.Count == 0,
+        scripts = new { cadastrados = qtdScripts },
+        globalizacoes = new { cadastradas = qtdGlobalizacoes },
+        erros
+    });
+}).DisableAntiforgery();
+
 // Import endpoints
 app.MapPost("/api/import/globalizacao", async (HttpRequest request, ImportExportService svc) =>
 {
