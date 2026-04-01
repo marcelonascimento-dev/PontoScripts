@@ -40,20 +40,15 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Branch</label>
-                    <InputText class="form-control" @bind-Value="entry.Branch" placeholder="Ex: improvement/item-29501" />
+                    <BranchSelector @bind-Value="entry.Branch" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Criado Por</label>
                     <InputText class="form-control" @bind-Value="entry.CriadoPor" placeholder="Nome do desenvolvedor" />
                 </div>
-                <div class="col-md-8">
+                <div class="col-12">
                     <label class="form-label">Descrição</label>
                     <InputText class="form-control" @bind-Value="entry.Descricao" placeholder="Descrição curta do script" />
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Ordem de Execução</label>
-                    <InputNumber class="form-control" @bind-Value="entry.OrdemExecucao" />
-                    <small class="text-muted">0 = auto-incremento</small>
                 </div>
 
                 <div class="col-12">

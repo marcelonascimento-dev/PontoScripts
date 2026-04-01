@@ -50,28 +50,29 @@ else
         <table class="table table-hover bg-white">
             <thead class="table-dark">
                 <tr>
+                    <th style="width: 60px;">Ordem</th>
                     <th>OS</th>
                     <th>Branch</th>
                     <th>Descrição</th>
                     <th>Criado Por</th>
                     <th>Data</th>
-                    <th>Ordem</th>
                     <th>Status</th>
-                    <th style="width: 100px;"></th>
+                    <th style="width: 140px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var e in entries)
                 {
+                    var versionado = e.VersaoScripts.Any();
                     <tr>
+                        <td class="text-center">@e.OrdemExecucao</td>
                         <td>@(e.NumeroOS ?? "-")</td>
                         <td><small class="text-muted">@(e.Branch ?? "-")</small></td>
                         <td>@e.Descricao</td>
                         <td>@e.CriadoPor</td>
                         <td>@e.DataCriacao.ToString("dd/MM/yyyy")</td>
-                        <td>@e.OrdemExecucao</td>
                         <td>
-                            @if (e.VersaoScripts.Any())
+                            @if (versionado)
                             {
                                 <span class="badge bg-success">Versionado</span>
                             }
@@ -81,7 +82,16 @@ else
                             }
                         </td>
                         <td>
-                            <a href="scripts/@e.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            @if (!versionado)
+                            {
+                                <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => MoverAsync(e, -1)" title="Mover para cima" disabled="@(!PodeMover(e, -1))">
+                                    <i class="bi bi-arrow-up"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => MoverAsync(e, 1)" title="Mover para baixo" disabled="@(!PodeMover(e, 1))">
+                                    <i class="bi bi-arrow-down"></i>
+                                </button>
+                            }
+                            <a href="scripts/@e.Id" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></a>
                             <button class="btn btn-sm btn-outline-danger" @onclick="() => ExcluirAsync(e)"><i class="bi bi-trash"></i></button>
                         </td>
                     </tr>
@@ -104,6 +114,31 @@ else
 
     private async Task FiltrarAsync()
     {
+        entries = await ScriptService.ListarAsync(string.IsNullOrWhiteSpace(busca) ? null : busca);
+    }
+
+    private bool PodeMover(ScriptAlteracaoEntry entry, int direcao)
+    {
+        if (entries is null) return false;
+        var pendentes = entries.Where(e => !e.VersaoScripts.Any()).ToList();
+        var idx = pendentes.IndexOf(entry);
+        if (idx < 0) return false;
+        return direcao == -1 ? idx > 0 : idx < pendentes.Count - 1;
+    }
+
+    private async Task MoverAsync(ScriptAlteracaoEntry entry, int direcao)
+    {
+        if (entries is null) return;
+        var pendentes = entries.Where(e => !e.VersaoScripts.Any()).OrderBy(e => e.OrdemExecucao).ToList();
+        var idx = pendentes.IndexOf(entry);
+        var novoIdx = idx + direcao;
+        if (novoIdx < 0 || novoIdx >= pendentes.Count) return;
+
+        var outro = pendentes[novoIdx];
+        (entry.OrdemExecucao, outro.OrdemExecucao) = (outro.OrdemExecucao, entry.OrdemExecucao);
+
+        await ScriptService.AtualizarAsync(entry);
+        await ScriptService.AtualizarAsync(outro);
         entries = await ScriptService.ListarAsync(string.IsNullOrWhiteSpace(busca) ? null : busca);
     }
 

@@ -13,7 +13,10 @@ public class ScriptAlteracaoService(AppDbContext db)
             query = query.Where(s => (s.NumeroOS != null && s.NumeroOS.Contains(busca))
                 || s.Descricao.Contains(busca)
                 || (s.Branch != null && s.Branch.Contains(busca)));
-        return await query.OrderByDescending(s => s.DataCriacao).ToListAsync();
+        return await query
+            .Include(s => s.VersaoScripts)
+            .OrderBy(s => s.OrdemExecucao)
+            .ToListAsync();
     }
 
     public async Task<ScriptAlteracaoEntry?> ObterAsync(int id)
