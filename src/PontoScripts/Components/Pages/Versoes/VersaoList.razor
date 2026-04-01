@@ -1,6 +1,7 @@
 @page "/versoes"
 @rendermode InteractiveServer
 @inject VersaoService VersaoService
+@inject IJSRuntime JS
 
 <PageTitle>Versões - PontoScripts</PageTitle>
 
@@ -48,12 +49,9 @@ else
                             <a href="versoes/@v.Id" class="btn btn-sm btn-outline-primary me-1" title="Preview">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            @if (v.Status == StatusVersao.Aberta)
-                            {
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ExcluirAsync(v)" title="Excluir">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            }
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmarExclusaoAsync(v)" title="Excluir">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </td>
                     </tr>
                 }
@@ -62,17 +60,57 @@ else
     </div>
 }
 
+@if (versaoParaExcluir is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle me-2"></i>Confirmar Exclusão</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarExclusao"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Deseja realmente excluir a versão <strong>@versaoParaExcluir.Numero</strong>?</p>
+                    <p class="mb-0 text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Os scripts e globalizações vinculados serão liberados e voltarão ao status <strong>Pendente</strong>.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelarExclusao">Cancelar</button>
+                    <button class="btn btn-danger" @onclick="ExcluirAsync">
+                        <i class="bi bi-trash me-1"></i>Excluir Versão
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<Versao>? versoes;
+    private Versao? versaoParaExcluir;
 
     protected override async Task OnInitializedAsync()
     {
         versoes = await VersaoService.ListarAsync();
     }
 
-    private async Task ExcluirAsync(Versao versao)
+    private void ConfirmarExclusaoAsync(Versao versao)
     {
-        await VersaoService.ExcluirAsync(versao.Id);
+        versaoParaExcluir = versao;
+    }
+
+    private void CancelarExclusao()
+    {
+        versaoParaExcluir = null;
+    }
+
+    private async Task ExcluirAsync()
+    {
+        if (versaoParaExcluir is null) return;
+        await VersaoService.ExcluirAsync(versaoParaExcluir.Id);
+        versaoParaExcluir = null;
         versoes = await VersaoService.ListarAsync();
     }
 
