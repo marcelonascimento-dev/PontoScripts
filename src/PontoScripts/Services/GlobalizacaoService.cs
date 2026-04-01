@@ -6,11 +6,20 @@ namespace PontoScripts.Services;
 
 public class GlobalizacaoService(AppDbContext db)
 {
-    public async Task<List<GlobalizacaoEntry>> ListarAsync()
+    public async Task<List<GlobalizacaoEntry>> ListarAsync(string? busca = null)
     {
-        return await db.GlobalizacaoEntries
-            .OrderByDescending(g => g.DataCriacao)
-            .ToListAsync();
+        var query = db.GlobalizacaoEntries.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(busca))
+        {
+            var termo = busca.ToLower();
+            query = query.Where(g => g.Tipo.ToLower().Contains(termo)
+                || g.Mensagem.ToLower().Contains(termo)
+                || g.TraducaoPtBR.ToLower().Contains(termo)
+                || g.TraducaoEnUS.ToLower().Contains(termo)
+                || g.TraducaoEsES.ToLower().Contains(termo)
+                || (g.Branch != null && g.Branch.ToLower().Contains(termo)));
+        }
+        return await query.OrderByDescending(g => g.DataCriacao).ToListAsync();
     }
 
     public async Task<GlobalizacaoEntry?> ObterAsync(int id)

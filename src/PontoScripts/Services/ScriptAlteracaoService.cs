@@ -10,9 +10,12 @@ public class ScriptAlteracaoService(AppDbContext db)
     {
         var query = db.ScriptAlteracaoEntries.AsQueryable();
         if (!string.IsNullOrWhiteSpace(busca))
-            query = query.Where(s => (s.NumeroOS != null && s.NumeroOS.Contains(busca))
-                || s.Descricao.Contains(busca)
-                || (s.Branch != null && s.Branch.Contains(busca)));
+        {
+            var termo = busca.ToLower();
+            query = query.Where(s => (s.NumeroOS != null && s.NumeroOS.ToLower().Contains(termo))
+                || s.Descricao.ToLower().Contains(termo)
+                || (s.Branch != null && s.Branch.ToLower().Contains(termo)));
+        }
         return await query
             .Include(s => s.VersaoScripts)
             .OrderBy(s => s.OrdemExecucao)

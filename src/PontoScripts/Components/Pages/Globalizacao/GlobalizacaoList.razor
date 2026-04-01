@@ -26,6 +26,13 @@
     </div>
 }
 
+<div class="mb-3">
+    <div class="input-group" style="max-width: 400px;">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" placeholder="Buscar por tipo, mensagem, tradução ou branch..." @bind="busca" @bind:event="oninput" @bind:after="FiltrarAsync" />
+    </div>
+</div>
+
 @if (entries is null)
 {
     <div class="text-center p-5"><span class="spinner-border"></span></div>
@@ -70,6 +77,7 @@ else
 
 @code {
     private List<GlobalizacaoEntry>? entries;
+    private string busca = "";
     private string? importMsg;
     private bool importErro;
 
@@ -78,10 +86,15 @@ else
         entries = await GlobService.ListarAsync();
     }
 
+    private async Task FiltrarAsync()
+    {
+        entries = await GlobService.ListarAsync(string.IsNullOrWhiteSpace(busca) ? null : busca);
+    }
+
     private async Task ExcluirAsync(GlobalizacaoEntry entry)
     {
         await GlobService.ExcluirAsync(entry.Id);
-        entries = await GlobService.ListarAsync();
+        entries = await GlobService.ListarAsync(string.IsNullOrWhiteSpace(busca) ? null : busca);
     }
 
     private async Task ImportarAsync(InputFileChangeEventArgs e)
