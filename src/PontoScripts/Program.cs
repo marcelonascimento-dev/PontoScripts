@@ -115,19 +115,6 @@ app.MapGet("/api/auth/logout", async (HttpContext ctx) =>
     return Results.Redirect("/");
 });
 
-// Export endpoints
-app.MapGet("/api/export/globalizacao", async (ImportExportService svc) =>
-{
-    var bytes = await svc.ExportarGlobalizacoesAsync();
-    return Results.File(bytes, "application/json", "globalizacoes.json");
-});
-
-app.MapGet("/api/export/scripts", async (ImportExportService svc) =>
-{
-    var bytes = await svc.ExportarScriptsAsync();
-    return Results.File(bytes, "application/json", "scripts.json");
-});
-
 // Validation endpoint — used by Azure DevOps build validation pipeline
 // Query params: verificarScripts=true&verificarGlobalizacao=true
 app.MapGet("/api/validacao/branch/{branch}", async (
