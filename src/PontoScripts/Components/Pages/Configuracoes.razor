@@ -146,6 +146,50 @@
             </div>
         </div>
 
+        <!-- Azure DevOps -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-git me-2"></i>Azure DevOps (Branches)</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Configure o Personal Access Token (PAT) para buscar branches dos repositorios. Os repositorios ja estao pre-configurados.</p>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Personal Access Token (PAT)</label>
+                    <input type="password" class="form-control" @bind="devopsPat" placeholder="Seu PAT do Azure DevOps" />
+                    <div class="form-text">PAT com permissao de leitura em Code (Read). Gere em Azure DevOps > User settings > Personal access tokens.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Repositorios configurados</label>
+                    <ul class="list-group list-group-flush">
+                        @foreach (var repo in devopsRepos)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span><i class="bi bi-folder me-1"></i><strong>@repo.Nome</strong> <small class="text-muted">(@repo.Organizacao/@repo.Projeto)</small></span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <button class="btn btn-primary" @onclick="SalvarDevOps" disabled="@salvandoDevOps">
+                    @if (salvandoDevOps)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    <i class="bi bi-check-lg me-1"></i>Salvar PAT
+                </button>
+
+                @if (!string.IsNullOrEmpty(mensagemDevOps))
+                {
+                    <div class="alert @(devOpsErro ? "alert-danger" : "alert-success") alert-dismissible fade show mt-3">
+                        @mensagemDevOps
+                        <button type="button" class="btn-close" @onclick="() => mensagemDevOps = null"></button>
+                    </div>
+                }
+            </div>
+        </div>
+
         <!-- Autenticação Microsoft -->
         <div class="card mb-4">
             <div class="card-header">
@@ -323,6 +367,11 @@
     private string? mensagemSucesso;
     private string? mensagemErro;
     private string? mensagemTeste;
+    private string devopsPat = "";
+    private List<RepoConfig> devopsRepos = [];
+    private bool salvandoDevOps;
+    private string? mensagemDevOps;
+    private bool devOpsErro;
     private string azureTenantId = "";
     private string azureClientId = "";
     private string azureClientSecret = "";
@@ -348,6 +397,8 @@
         appSettingsPath = ConfigService.ObterAppSettingsPath();
         sqliteTamanho = ConfigService.ObterTamanhoBancoSqlite();
         sqliteExiste = File.Exists(caminhoSqliteAtual);
+        devopsPat = ConfigService.ObterAzureDevOpsPat();
+        devopsRepos = ConfigService.ObterAzureDevOpsRepos();
         azureTenantId = ConfigService.ObterAzureAdTenantId();
         azureClientId = ConfigService.ObterAzureAdClientId();
         azureClientSecret = ConfigService.ObterAzureAdClientSecret();
@@ -431,6 +482,34 @@
         return System.Text.RegularExpressions.Regex.Replace(
             cs, @"(Password|Pwd)\s*=\s*[^;]+", "$1=******",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private async Task SalvarDevOps()
+    {
+        mensagemDevOps = null;
+        if (string.IsNullOrWhiteSpace(devopsPat))
+        {
+            mensagemDevOps = "Informe o Personal Access Token.";
+            devOpsErro = true;
+            return;
+        }
+
+        salvandoDevOps = true;
+        try
+        {
+            await ConfigService.SalvarAzureDevOpsAsync(devopsPat, devopsRepos);
+            mensagemDevOps = "PAT salvo com sucesso. As branches serao carregadas nos formularios.";
+            devOpsErro = false;
+        }
+        catch (Exception ex)
+        {
+            mensagemDevOps = $"Erro ao salvar: {ex.Message}";
+            devOpsErro = true;
+        }
+        finally
+        {
+            salvandoDevOps = false;
+        }
     }
 
     private async Task SalvarAzureAd()

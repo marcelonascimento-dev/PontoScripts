@@ -38,6 +38,8 @@ builder.Services.AddScoped<SqlGeneratorService>();
 builder.Services.AddScoped<ImportExportService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<ConfiguracaoService>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<AzureDevOpsService>();
 
 // Authentication — Microsoft Entra ID (Azure AD)
 var azureAdSection = builder.Configuration.GetSection("AzureAd");

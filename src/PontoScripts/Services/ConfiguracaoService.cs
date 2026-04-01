@@ -45,6 +45,61 @@ public class ConfiguracaoService
         return Path.Combine(_env.ContentRootPath, "appsettings.json");
     }
 
+    // Azure DevOps
+    public string ObterAzureDevOpsPat() => _configuration["AzureDevOps:Pat"] ?? "";
+
+    public List<RepoConfig> ObterAzureDevOpsRepos()
+    {
+        var repos = new List<RepoConfig>();
+        var section = _configuration.GetSection("AzureDevOps:Repositorios");
+        if (!section.Exists()) return repos;
+
+        foreach (var child in section.GetChildren())
+        {
+            var org = child["Organizacao"] ?? "";
+            var projeto = child["Projeto"] ?? "";
+            var nome = child["Nome"] ?? "";
+            if (!string.IsNullOrEmpty(org) && !string.IsNullOrEmpty(nome))
+                repos.Add(new RepoConfig { Organizacao = org, Projeto = projeto, Nome = nome });
+        }
+        return repos;
+    }
+
+    public async Task SalvarAzureDevOpsAsync(string pat, List<RepoConfig> repos)
+    {
+        var appSettingsPath = ObterAppSettingsPath();
+        JsonNode? root;
+        if (File.Exists(appSettingsPath))
+        {
+            var json = await File.ReadAllTextAsync(appSettingsPath);
+            root = JsonNode.Parse(json) ?? new JsonObject();
+        }
+        else
+        {
+            root = new JsonObject();
+        }
+
+        var devops = new JsonObject();
+        devops["Pat"] = pat;
+
+        var reposArray = new JsonArray();
+        foreach (var repo in repos)
+        {
+            reposArray.Add(new JsonObject
+            {
+                ["Organizacao"] = repo.Organizacao,
+                ["Projeto"] = repo.Projeto,
+                ["Nome"] = repo.Nome
+            });
+        }
+        devops["Repositorios"] = reposArray;
+        root["AzureDevOps"] = devops;
+
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        await File.WriteAllTextAsync(appSettingsPath, root.ToJsonString(options));
+    }
+
+    // Azure AD
     public string ObterAzureAdTenantId() => _configuration["AzureAd:TenantId"] ?? "";
     public string ObterAzureAdClientId() => _configuration["AzureAd:ClientId"] ?? "";
     public string ObterAzureAdClientSecret() => _configuration["AzureAd:ClientSecret"] ?? "";

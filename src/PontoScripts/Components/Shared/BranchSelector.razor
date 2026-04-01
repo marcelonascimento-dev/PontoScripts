@@ -1,0 +1,181 @@
+@inject AzureDevOpsService DevOpsService
+
+<div class="branch-selector" @onfocusout="OnFocusOut" tabindex="-1">
+    <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-git"></i></span>
+        <input type="text"
+               class="form-control"
+               placeholder="@Placeholder"
+               value="@textoInput"
+               @oninput="OnInput"
+               @onfocus="OnFocus"
+               autocomplete="off" />
+        @if (!string.IsNullOrEmpty(textoInput))
+        {
+            <button type="button" class="btn btn-outline-secondary" @onclick="Limpar" tabindex="-1">
+                <i class="bi bi-x"></i>
+            </button>
+        }
+        <button type="button" class="btn btn-outline-secondary" @onclick="AbrirDropdown" title="Listar branches" tabindex="-1">
+            @if (carregando)
+            {
+                <span class="spinner-border spinner-border-sm"></span>
+            }
+            else
+            {
+                <i class="bi bi-chevron-down"></i>
+            }
+        </button>
+    </div>
+
+    @if (dropdownAberto && !carregando)
+    {
+        <div class="branch-dropdown">
+            @if (erro is not null)
+            {
+                <div class="branch-dropdown-msg text-danger">
+                    <i class="bi bi-exclamation-triangle me-1"></i>@erro
+                </div>
+            }
+            else if (branchesFiltradas.Count == 0)
+            {
+                <div class="branch-dropdown-msg text-muted">
+                    @if (!DevOpsService.PatConfigurado)
+                    {
+                        <span>PAT nao configurado. Configure em <a href="configuracoes" tabindex="-1">Configuracoes</a>.</span>
+                    }
+                    else if (todasBranches.Count == 0)
+                    {
+                        <span>Nenhuma branch encontrada nos repositorios.</span>
+                        @if (DevOpsService.UltimoErro is not null)
+                        {
+                            <br /><span class="text-danger">@DevOpsService.UltimoErro</span>
+                        }
+                    }
+                    else
+                    {
+                        <span>Nenhuma branch encontrada para "<strong>@textoInput</strong>"</span>
+                    }
+                </div>
+            }
+            else
+            {
+                @foreach (var grupo in branchesFiltradas.GroupBy(b => b.Repositorio))
+                {
+                    <div class="branch-dropdown-header">
+                        <i class="bi bi-folder me-1"></i>@grupo.Key
+                    </div>
+                    @foreach (var branch in grupo)
+                    {
+                        <div class="branch-dropdown-item @(branch.Nome == Value ? "active" : "")"
+                             @onclick="() => Selecionar(branch)">
+                            <i class="bi bi-diagram-2 me-1"></i>@branch.Nome
+                        </div>
+                    }
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Selecione ou digite a branch...";
+
+    private string textoInput = "";
+    private bool dropdownAberto;
+    private bool carregando;
+    private string? erro;
+    private List<BranchInfo> todasBranches = [];
+    private List<BranchInfo> branchesFiltradas = [];
+    private bool branchesCarregadas;
+
+    protected override void OnParametersSet()
+    {
+        textoInput = Value ?? "";
+    }
+
+    private async Task CarregarBranchesAsync(bool force = false)
+    {
+        if (branchesCarregadas && !force) return;
+
+        carregando = true;
+        erro = null;
+        StateHasChanged();
+
+        try
+        {
+            todasBranches = await DevOpsService.ListarBranchesAsync(force);
+            branchesCarregadas = true;
+        }
+        catch (Exception ex)
+        {
+            erro = $"Erro ao carregar branches: {ex.Message}";
+        }
+        finally
+        {
+            carregando = false;
+        }
+    }
+
+    private void Filtrar()
+    {
+        if (string.IsNullOrWhiteSpace(textoInput))
+        {
+            branchesFiltradas = todasBranches;
+            return;
+        }
+
+        var termos = textoInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        branchesFiltradas = todasBranches
+            .Where(b => termos.All(t =>
+                b.Nome.Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                b.Repositorio.Contains(t, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        textoInput = e.Value?.ToString() ?? "";
+        await CarregarBranchesAsync();
+        Filtrar();
+        dropdownAberto = true;
+        await ValueChanged.InvokeAsync(string.IsNullOrWhiteSpace(textoInput) ? null : textoInput);
+    }
+
+    private async Task OnFocus()
+    {
+        await CarregarBranchesAsync();
+        Filtrar();
+        dropdownAberto = true;
+    }
+
+    private async Task AbrirDropdown()
+    {
+        await CarregarBranchesAsync();
+        Filtrar();
+        dropdownAberto = !dropdownAberto;
+    }
+
+    private async Task Selecionar(BranchInfo branch)
+    {
+        textoInput = branch.Nome;
+        dropdownAberto = false;
+        await ValueChanged.InvokeAsync(branch.Nome);
+    }
+
+    private async Task Limpar()
+    {
+        textoInput = "";
+        dropdownAberto = false;
+        await ValueChanged.InvokeAsync(null);
+    }
+
+    private async Task OnFocusOut()
+    {
+        await Task.Delay(200);
+        dropdownAberto = false;
+        StateHasChanged();
+    }
+}
